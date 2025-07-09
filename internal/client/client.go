@@ -1,0 +1,58 @@
+package client
+
+import (
+	"context"
+	"fmt"
+
+	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/tools/clientcmd"
+)
+
+type Client struct {
+	clientset *kubernetes.Clientset
+}
+
+type SecretsFetcher interface {
+	FetchSecrets(namespace string) (*corev1.SecretList, error)
+	FetchSecret(namespace, name string) (*corev1.Secret, error)
+}
+
+func NewClient(kubeconfig string) (*Client, error) {
+	config, err := clientcmd.BuildConfigFromFlags("", kubeconfig)
+
+	if err != nil {
+		return nil, fmt.Errorf("cant build the k8s config with the used kubeconfig: %w", err)
+	}
+
+	clientset, err := kubernetes.NewForConfig(config)
+
+	if err != nil {
+		return nil, fmt.Errorf("cant build the k8s client with the used kubeconfig: %w", err)
+	}
+
+	return &Client{
+		clientset: clientset,
+	}, nil
+}
+
+func (c Client) FetchSecrets(namespace string) (*corev1.SecretList, error) {
+	secrets, err := c.clientset.CoreV1().Secrets(namespace).List(context.TODO(), metav1.ListOptions{})
+
+	if err != nil {
+		return nil, fmt.Errorf("error listing secrets in namespace %s: %w", namespace, err)
+	}
+
+	return secrets, nil
+}
+
+func (c Client) FetchSecret(namespace, name string) (*corev1.Secret, error) {
+	secret, err := c.clientset.CoreV1().Secrets(namespace).Get(context.TODO(), name, metav1.GetOptions{})
+
+	if err != nil {
+		return nil, fmt.Errorf("error fetching secret %s in namespace %s: %w", name, namespace, err)
+	}
+
+	return secret, nil
+}
