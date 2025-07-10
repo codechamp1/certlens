@@ -8,8 +8,6 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 
 	"certlens/configs"
-	"certlens/internal/client"
-	"certlens/internal/repository"
 	"certlens/internal/service"
 	"certlens/internal/ui"
 )
@@ -17,17 +15,18 @@ import (
 func main() {
 	config := configs.Load()
 
-	client, err := client.NewClient(config.KubeConfigPath)
+	//client, err := client.NewClient(config.KubeConfigPath)
+	//
+	//if err != nil {
+	//	log.Fatalf("Failed to create Kubernetes client: %v", err)
+	//}
+	//
+	//repo := repository.NewSecretsRepository(client)
 
-	if err != nil {
-		log.Fatalf("Failed to create Kubernetes client: %v", err)
-	}
+	//svc := service.NewSecretsService(repo)
+	mockSvc := service.NewMockSecretService()
 
-	repo := repository.NewSecretsRepository(client)
-
-	svc := service.NewSecretsService(repo)
-
-	model, err := ui.NewModel("adm", svc)
+	model, err := ui.NewModel(config.Namespace, mockSvc)
 
 	if err != nil {
 		log.Fatalf("Failed to create UI model: %v", err)

@@ -8,7 +8,12 @@ import (
 
 type SecretsService interface {
 	InspectTLSSecret(namespace, name string) (string, error)
-	ListTLSSecrets(namespace string) ([]string, error)
+	ListTLSSecrets(namespace string) ([]Secret, error)
+}
+
+type Secret struct {
+	Name      string
+	Namespace string
 }
 
 type secretsService struct {
@@ -40,16 +45,16 @@ func (s secretsService) InspectTLSSecret(namespace, name string) (string, error)
 	return certInfo, nil
 }
 
-func (s secretsService) ListTLSSecrets(namespace string) ([]string, error) {
+func (s secretsService) ListTLSSecrets(namespace string) ([]Secret, error) {
 	secrets, err := s.GetTLSSecrets(namespace)
 
 	if err != nil {
 		return nil, fmt.Errorf("can not list TLS secrets: %w", err)
 	}
 
-	var tlsSecretsNames []string
+	var tlsSecretsNames []Secret
 	for _, secret := range secrets {
-		tlsSecretsNames = append(tlsSecretsNames, secret.Name)
+		tlsSecretsNames = append(tlsSecretsNames, Secret{secret.Name, secret.Namespace})
 	}
 
 	return tlsSecretsNames, nil
