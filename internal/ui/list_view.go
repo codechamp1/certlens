@@ -19,14 +19,13 @@ type secretsLoadedMsg struct {
 	err     error
 }
 
-type secretDelegate struct {
-	list.DefaultDelegate
+type secretLoadedMsg struct {
+	secret list.Item
+	err    error
 }
 
-func newSecretDelegate() secretDelegate {
-	return secretDelegate{
-		DefaultDelegate: list.NewDefaultDelegate(),
-	}
+type secretDelegate struct {
+	list.DefaultDelegate
 }
 
 type secretItem struct {
@@ -41,17 +40,19 @@ func (s secretItem) FilterValue() string { return s.name }
 type Model struct {
 	secrets       list.Model
 	selected      *secretItem
+	Name          string
 	Namespace     string
 	SecretService service.SecretsService
 	width         int
 	height        int
 }
 
-func NewModel(namespace string, svc service.SecretsService) (Model, error) {
+func NewModel(svc service.SecretsService, namespace, name string) (Model, error) {
 	var items []list.Item
 	secretsList := list.New(items, newSecretDelegate(), 50, 20)
 	secretsList.Title = "Select a TLS Secret"
 	return Model{
+		Name:          name,
 		Namespace:     namespace,
 		SecretService: svc,
 		secrets:       secretsList,
@@ -70,10 +71,6 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m, tea.Quit
 		case "u":
 			return m, loadSecretsCmd(m)
-		case "enter":
-			if item, ok := m.secrets.SelectedItem().(secretItem); ok {
-				m.selected = &item
-			}
 		}
 
 	case tea.WindowSizeMsg:
@@ -87,10 +84,21 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			log.Fatalln(fmt.Errorf("secrets loaded error: %v", msg.err))
 		}
 		m.secrets.SetItems(msg.secrets)
+	case secretLoadedMsg:
+		if msg.err != nil {
+			log.Fatalln(fmt.Errorf("secrets loaded error: %v", msg.err))
+		}
+		m.secrets.SetItems([]list.Item{msg.secret})
 	}
 
 	var cmd tea.Cmd
 	m.secrets, cmd = m.secrets.Update(msg)
+
+	if item, ok := m.secrets.SelectedItem().(secretItem); ok {
+		m.selected = &item
+	} else {
+		m.selected = nil
+	}
 	return m, cmd
 }
 func (m Model) View() string {
@@ -105,9 +113,14 @@ func (m Model) View() string {
 
 	rightStyle := lipgloss.NewStyle().Width(rightWidth).Height(usableHeight)
 	var rightView string
+
 	if m.selected != nil {
-		rightContent := fmt.Sprintf("Name: %s\nNamespace: %s\n", m.selected.name, m.selected.namespace)
-		rightView = rightStyle.Render(rightContent)
+		data, err := m.SecretService.InspectTLSSecret(m.selected.namespace, m.selected.name)
+		if err != nil {
+			rightView = rightStyle.Render(err.Error())
+		} else {
+			rightView = rightStyle.Render(data)
+		}
 	} else {
 		rightContent := fmt.Sprintf("Nothing yet selected, waiting.....")
 		rightView = rightStyle.Render(rightContent)
@@ -121,7 +134,14 @@ func loadSecretsCmd(m Model) tea.Cmd {
 		if m.SecretService == nil {
 			return secretsLoadedMsg{nil, fmt.Errorf("secrets service not initialized")}
 		}
+
+		if m.Name != "" {
+			secret, err := m.SecretService.ListTLSSecret(m.Namespace, m.Name)
+			return secretLoadedMsg{secretItem{secret.Name, secret.Namespace}, err}
+		}
+
 		secrets, err := m.SecretService.ListTLSSecrets(m.Namespace)
+
 		items := make([]list.Item, len(secrets))
 		for i, s := range secrets {
 			items[i] = secretItem{s.Name, s.Namespace}
@@ -130,10 +150,24 @@ func loadSecretsCmd(m Model) tea.Cmd {
 	}
 }
 
-func (sd secretDelegate) AdditionalShortHelpKeys() []key.Binding {
-	return []key.Binding{
-		key.NewBinding(
+func newSecretDelegate() secretDelegate {
+	delegate := list.NewDefaultDelegate()
+
+	delegate.ShortHelpFunc = func() []key.Binding {
+		keys := []key.Binding{key.NewBinding(
+			key.WithKeys("u"),
 			key.WithHelp("u", "refresh secrets"),
-		),
+		)}
+		return keys
 	}
+
+	delegate.FullHelpFunc = func() [][]key.Binding {
+		groups := [][]key.Binding{{key.NewBinding(
+			key.WithKeys("u"),
+			key.WithHelp("u", "refresh secrets"),
+		)}}
+		return groups
+	}
+
+	return secretDelegate{delegate}
 }

@@ -5,8 +5,14 @@ type mockRepository struct {
 	mockGetTLSSecret  func() (SecretInfo, error)
 }
 
-func NewMockRepository() SecretsRepository {
-	return mockRepository{}
+func NewMockRepository(
+	mockGetTLSSecrets func() ([]SecretInfo, error),
+	mockGetTLSSecret func() (SecretInfo, error),
+) SecretsRepository {
+	return mockRepository{
+		mockGetTLSSecrets: mockGetTLSSecrets,
+		mockGetTLSSecret:  mockGetTLSSecret,
+	}
 }
 
 func (m mockRepository) GetTLSSecrets(namespace string) ([]SecretInfo, error) {
