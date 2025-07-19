@@ -12,8 +12,6 @@ import (
 	"certlens/internal/service"
 )
 
-var docStyle = lipgloss.NewStyle().Border(lipgloss.NormalBorder()).Padding(1)
-
 type secretsLoadedMsg struct {
 	secrets []list.Item
 	err     error
@@ -43,6 +41,7 @@ type Model struct {
 	Name          string
 	Namespace     string
 	SecretService service.SecretsService
+	theme         Theme
 	width         int
 	height        int
 }
@@ -56,6 +55,7 @@ func NewModel(svc service.SecretsService, namespace, name string) (Model, error)
 		Namespace:     namespace,
 		SecretService: svc,
 		secrets:       secretsList,
+		theme:         Default,
 	}, nil
 }
 
@@ -66,15 +66,15 @@ func (m Model) Init() tea.Cmd {
 func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
-		switch msg.String() {
-		case "q", "ctrl+c":
-			return m, tea.Quit
-		case "u":
-			return m, loadSecretsCmd(m)
+		if m.secrets.FilterState() != list.Filtering {
+			switch msg.String() {
+			case "u":
+				return m, loadSecretsCmd(m)
+			}
 		}
 
 	case tea.WindowSizeMsg:
-		h, v := docStyle.GetFrameSize()
+		h, v := m.theme.docStyle.GetFrameSize()
 		m.width = msg.Width
 		m.height = msg.Height
 		m.secrets.SetSize(msg.Width-h, msg.Height-v)
@@ -102,7 +102,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	return m, cmd
 }
 func (m Model) View() string {
-	h, v := docStyle.GetFrameSize()
+	h, v := m.theme.docStyle.GetFrameSize()
 	usableWidth := m.width - h
 	usableHeight := m.height - v
 
@@ -119,14 +119,14 @@ func (m Model) View() string {
 		if err != nil {
 			rightView = rightStyle.Render(err.Error())
 		} else {
-			rightView = rightStyle.Render(data)
+			rightView = rightStyle.Render(formatCertificateInfo(*data, m.theme))
 		}
 	} else {
 		rightContent := fmt.Sprintf("Nothing yet selected, waiting.....")
 		rightView = rightStyle.Render(rightContent)
 	}
 
-	return docStyle.Render(lipgloss.JoinHorizontal(lipgloss.Top, leftView, rightView))
+	return m.theme.docStyle.Render(lipgloss.JoinHorizontal(lipgloss.Top, leftView, rightView))
 }
 
 func loadSecretsCmd(m Model) tea.Cmd {
@@ -168,6 +168,10 @@ func newSecretDelegate() secretDelegate {
 		)}}
 		return groups
 	}
+
+	// TODO: use the theme styles
+	delegate.Styles.NormalTitle = delegate.Styles.NormalTitle.Foreground(lipgloss.Color("#00BFFF"))
+	delegate.Styles.NormalDesc = delegate.Styles.NormalDesc.Foreground(lipgloss.Color("#5DADE2"))
 
 	return secretDelegate{delegate}
 }
