@@ -20,13 +20,14 @@ type secretLoadedMsg struct {
 	secret list.Item
 }
 
-type secretDelegate struct {
-	list.DefaultDelegate
-}
-
+type inspectTLSSecretMsg struct{}
 type loadingStartedMsg struct{}
 
 type errorMsg struct{ err error }
+
+type secretDelegate struct {
+	list.DefaultDelegate
+}
 
 type secretItem struct {
 	name      string
@@ -38,16 +39,18 @@ func (s secretItem) Description() string { return "Namespace: " + s.namespace }
 func (s secretItem) FilterValue() string { return s.name }
 
 type Model struct {
-	loading       bool
-	secrets       list.Model
-	selected      *secretItem
-	spinner       spinner.Model
-	Name          string
-	Namespace     string
-	SecretService service.SecretsService
-	theme         Theme
-	width         int
-	height        int
+	loading             bool
+	secrets             list.Model
+	selected            *secretItem
+	spinner             spinner.Model
+	inspectedSecretData string
+	inspectedError      error
+	Name                string
+	Namespace           string
+	SecretService       service.SecretsService
+	theme               Theme
+	width               int
+	height              int
 }
 
 func NewModel(svc service.SecretsService, namespace, name string) (Model, error) {
@@ -74,9 +77,11 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	var cmds []tea.Cmd
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
-		if m.secrets.FilterState() != list.Filtering {
-			switch msg.String() {
-			case "u":
+		switch msg.String() {
+		case "q", "ctrl+c":
+			return m, tea.Quit
+		case "u":
+			if m.secrets.FilterState() != list.Filtering {
 				return m, loadSecretsCmd(m)
 			}
 		}
@@ -96,6 +101,13 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case loadingStartedMsg:
 		m.loading = true
 		cmds = append(cmds, m.spinner.Tick)
+	case inspectTLSSecretMsg:
+		data, err := m.SecretService.InspectTLSSecret(m.selected.namespace, m.selected.name)
+		if err != nil {
+			m.inspectedError = fmt.Errorf("failed to inspect secret %s/%s: %w", m.selected.namespace, m.selected.name, err)
+			return m, nil
+		}
+		m.inspectedSecretData = formatCertificateInfo(*data, m.theme)
 	case errorMsg:
 		m.loading = false
 		m.secrets.Title = fmt.Sprintf("Error: %v", msg.err)
@@ -113,7 +125,14 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		cmds = append(cmds, spinCmd)
 	}
 
-	updateSelectedItem(&m)
+	if sel := m.secrets.SelectedItem(); sel != nil {
+		if item, ok := sel.(secretItem); ok {
+			if m.selected == nil || item.name != m.selected.name || item.namespace != m.selected.namespace {
+				m.selected = &item
+				cmds = append(cmds, func() tea.Msg { return inspectTLSSecretMsg{} })
+			}
+		}
+	}
 
 	return m, tea.Batch(cmds...)
 }
@@ -189,20 +208,15 @@ func (m Model) leftPane(width, height int) string {
 
 func (m Model) rightPane(width, height int) string {
 	style := lipgloss.NewStyle().Width(width).Height(height)
-	if m.selected != nil {
-		data, err := m.SecretService.InspectTLSSecret(m.selected.namespace, m.selected.name)
-		if err != nil {
-			return style.Render(err.Error())
-		}
-		return style.Render(formatCertificateInfo(*data, m.theme))
-	}
-	return style.Render("Nothing yet selected, waiting.....")
-}
 
-func updateSelectedItem(m *Model) {
-	if item, ok := m.secrets.SelectedItem().(*secretItem); ok {
-		m.selected = item
-	} else {
-		m.selected = nil
+	if m.inspectedError != nil {
+		return style.Render(fmt.Errorf("error inspecting secret: %w", m.inspectedError).Error())
 	}
+
+	if m.selected != nil && !m.loading {
+		return style.Render(m.inspectedSecretData)
+	}
+
+	return style.Render("Nothing yet selected, waiting.....")
+
 }
