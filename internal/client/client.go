@@ -7,6 +7,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
 )
 
@@ -19,8 +20,8 @@ type SecretsFetcher interface {
 	FetchSecret(namespace, name string) (*corev1.Secret, error)
 }
 
-func NewClient(kubeconfig string) (*Client, error) {
-	config, err := clientcmd.BuildConfigFromFlags("", kubeconfig)
+func NewClient(kubeconfig, context string) (*Client, error) {
+	config, err := buildConfigWithContext(context, kubeconfig)
 
 	if err != nil {
 		return nil, fmt.Errorf("cant build the k8s config with the used kubeconfig: %w", err)
@@ -55,4 +56,12 @@ func (c Client) FetchSecret(namespace, name string) (*corev1.Secret, error) {
 	}
 
 	return secret, nil
+}
+
+func buildConfigWithContext(context string, kubeconfigPath string) (*rest.Config, error) {
+	return clientcmd.NewNonInteractiveDeferredLoadingClientConfig(
+		&clientcmd.ClientConfigLoadingRules{ExplicitPath: kubeconfigPath},
+		&clientcmd.ConfigOverrides{
+			CurrentContext: context,
+		}).ClientConfig()
 }
