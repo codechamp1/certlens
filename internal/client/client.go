@@ -24,7 +24,7 @@ func NewClient(kubeconfig, context string) (*Client, error) {
 	config, err := buildConfigWithContext(context, kubeconfig)
 
 	if err != nil {
-		return nil, fmt.Errorf("cant build the k8s config with the used kubeconfig: %w", err)
+		return nil, fmt.Errorf("cant build the k8s config with the used kubeconfig and context: %w", err)
 	}
 
 	clientset, err := kubernetes.NewForConfig(config)
@@ -59,8 +59,15 @@ func (c Client) FetchSecret(namespace, name string) (*corev1.Secret, error) {
 }
 
 func buildConfigWithContext(context string, kubeconfigPath string) (*rest.Config, error) {
+	var loadingRules *clientcmd.ClientConfigLoadingRules
+	if kubeconfigPath != "" {
+		loadingRules = &clientcmd.ClientConfigLoadingRules{ExplicitPath: kubeconfigPath}
+	} else {
+		loadingRules = clientcmd.NewDefaultClientConfigLoadingRules()
+	}
+
 	return clientcmd.NewNonInteractiveDeferredLoadingClientConfig(
-		&clientcmd.ClientConfigLoadingRules{ExplicitPath: kubeconfigPath},
+		loadingRules,
 		&clientcmd.ConfigOverrides{
 			CurrentContext: context,
 		}).ClientConfig()
