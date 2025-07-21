@@ -26,8 +26,6 @@ plugins:
     background: false
     confirm: false
     args:
-      - --name
-      - $NAME
       - --namespace
       - $NAMESPACE
       - --context
