@@ -6,15 +6,20 @@ import (
 
 type Theme struct {
 	docStyle      lipgloss.Style
+	errorModal    lipgloss.Style
 	sectionHeader lipgloss.Style
 	key           lipgloss.Style
 	value         lipgloss.Style
-	itemTitle     lipgloss.Style
-	itemDesc      lipgloss.Style
 }
 
 var Default = Theme{
 	docStyle: lipgloss.NewStyle().Border(lipgloss.NormalBorder()).Padding(1),
+
+	errorModal: lipgloss.NewStyle().
+		Border(lipgloss.RoundedBorder()).
+		Padding(1, 2).
+		Align(lipgloss.Center).
+		Foreground(lipgloss.Color("#ff5555")),
 
 	sectionHeader: lipgloss.NewStyle().
 		Foreground(lipgloss.Color("#00BFFF")).
@@ -34,12 +39,8 @@ var Default = Theme{
 		MaxWidth(50).
 		PaddingLeft(1), // Same dark gray as main text for values
 
-	itemTitle: lipgloss.NewStyle().
-		Background(lipgloss.Color("#007ACC")). // Consistent rich blue for list title background
-		Foreground(lipgloss.Color("#FFFFFF")). // White text
-		Padding(0, 1).
-		Bold(true),
+}
 
-	itemDesc: lipgloss.NewStyle().
-		PaddingLeft(2),
+func (t Theme) ErrorModalWithWidth(width int) lipgloss.Style {
+	return t.errorModal.Width(width)
 }

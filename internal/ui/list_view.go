@@ -39,9 +39,11 @@ func (s secretItem) Description() string { return "Namespace: " + s.namespace }
 func (s secretItem) FilterValue() string { return s.name }
 
 type Model struct {
+	errorModalMsg       string
 	loading             bool
 	secrets             list.Model
 	selected            *secretItem
+	showingErrorModal   bool
 	spinner             spinner.Model
 	inspectedSecretData string
 	inspectedError      error
@@ -77,6 +79,8 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	var cmds []tea.Cmd
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
+		m.showingErrorModal = false
+		m.errorModalMsg = ""
 		switch msg.String() {
 		case "q", "ctrl+c":
 			return m, tea.Quit
@@ -110,7 +114,8 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.inspectedSecretData = formatCertificateInfo(*data, m.theme)
 	case errorMsg:
 		m.loading = false
-		m.secrets.Title = fmt.Sprintf("Error: %v", msg.err)
+		m.showingErrorModal = true
+		m.errorModalMsg = fmt.Sprintf("Error: %v", msg.err)
 	}
 
 	if !m.loading {
@@ -146,6 +151,10 @@ func (m Model) View() string {
 
 	left := m.leftPane(leftWidth, usableHeight)
 	right := m.rightPane(rightWidth, usableHeight)
+
+	if m.showingErrorModal && m.errorModalMsg != "" {
+		return m.renderErrorModal(m.errorModalMsg)
+	}
 
 	return m.theme.docStyle.Render(lipgloss.JoinHorizontal(lipgloss.Top, left, right))
 }
@@ -219,4 +228,9 @@ func (m Model) rightPane(width, height int) string {
 
 	return style.Render("Nothing yet selected, waiting.....")
 
+}
+
+func (m Model) renderErrorModal(msg string) string {
+	errorModalRender := m.theme.ErrorModalWithWidth(m.width).Render("Error:\n" + msg + "\n\nPress any key to dismiss.")
+	return lipgloss.Place(m.width, m.height, lipgloss.Center, lipgloss.Center, errorModalRender)
 }
