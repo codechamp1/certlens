@@ -63,7 +63,7 @@ func renderField(keyStyle lipgloss.Style, valueStyle lipgloss.Style, key, value 
 	)
 }
 
-func formatCertificateInfo(ci service.CertificateInfo, t Theme) string {
+func formatCertificateInfo(ci service.CertificateInfo, t ThemeProvider) string {
 	var sb strings.Builder
 	val := reflect.ValueOf(ci)
 	typ := reflect.TypeOf(ci)
@@ -76,11 +76,11 @@ func formatCertificateInfo(ci service.CertificateInfo, t Theme) string {
 			continue
 		}
 
-		sb.WriteString(t.sectionHeader.Render(label))
+		sb.WriteString(t.SectionHeader().Render(label))
 		sb.WriteString("\n")
 		fields := viewFieldsFromStruct(fieldVal.Interface())
 		for _, f := range fields {
-			sb.WriteString(renderField(t.key, t.value, f.Label, f.Value))
+			sb.WriteString(renderField(t.Key(), t.Value(), f.Label, f.Value))
 			sb.WriteString("\n")
 		}
 		sb.WriteString("\n")

@@ -4,6 +4,15 @@ import (
 	"github.com/charmbracelet/lipgloss"
 )
 
+type ThemeProvider interface {
+	DocStyle() lipgloss.Style
+	ErrorModalWithWidth(width int) lipgloss.Style
+	SectionHeader() lipgloss.Style
+	Pane(width, height int) lipgloss.Style
+	Key() lipgloss.Style
+	Value() lipgloss.Style
+}
+
 type Theme struct {
 	docStyle      lipgloss.Style
 	errorModal    lipgloss.Style
@@ -41,6 +50,28 @@ var Default = Theme{
 
 }
 
+func (t Theme) DocStyle() lipgloss.Style {
+	return t.docStyle
+}
+
 func (t Theme) ErrorModalWithWidth(width int) lipgloss.Style {
 	return t.errorModal.Width(width)
+}
+
+func (t Theme) Pane(width, height int) lipgloss.Style {
+	return lipgloss.NewStyle().
+		Width(width).
+		Height(height)
+}
+
+func (t Theme) SectionHeader() lipgloss.Style {
+	return t.sectionHeader
+}
+
+func (t Theme) Key() lipgloss.Style {
+	return t.key
+}
+
+func (t Theme) Value() lipgloss.Style {
+	return t.value
 }

@@ -50,7 +50,7 @@ type Model struct {
 	Name                string
 	Namespace           string
 	SecretService       service.SecretsService
-	theme               Theme
+	theme               ThemeProvider
 	width               int
 	height              int
 }
@@ -79,8 +79,10 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	var cmds []tea.Cmd
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
-		m.showingErrorModal = false
-		m.errorModalMsg = ""
+		if m.showingErrorModal {
+			m.showingErrorModal = false
+			m.errorModalMsg = ""
+		}
 		switch msg.String() {
 		case "q", "ctrl+c":
 			return m, tea.Quit
@@ -91,7 +93,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 
 	case tea.WindowSizeMsg:
-		h, v := m.theme.docStyle.GetFrameSize()
+		h, v := m.theme.DocStyle().GetFrameSize()
 		m.width = msg.Width
 		m.height = msg.Height
 		m.secrets.SetSize(msg.Width-h, msg.Height-v)
@@ -122,9 +124,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		var listCmd tea.Cmd
 		m.secrets, listCmd = m.secrets.Update(msg)
 		cmds = append(cmds, listCmd)
-	}
-
-	if m.loading {
+	} else {
 		var spinCmd tea.Cmd
 		m.spinner, spinCmd = m.spinner.Update(msg)
 		cmds = append(cmds, spinCmd)
@@ -142,7 +142,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	return m, tea.Batch(cmds...)
 }
 func (m Model) View() string {
-	h, v := m.theme.docStyle.GetFrameSize()
+	h, v := m.theme.DocStyle().GetFrameSize()
 	usableWidth := m.width - h
 	usableHeight := m.height - v
 
@@ -156,7 +156,7 @@ func (m Model) View() string {
 		return m.renderErrorModal(m.errorModalMsg)
 	}
 
-	return m.theme.docStyle.Render(lipgloss.JoinHorizontal(lipgloss.Top, left, right))
+	return m.theme.DocStyle().Render(lipgloss.JoinHorizontal(lipgloss.Top, left, right))
 }
 
 func loadSecretsCmd(m Model) tea.Cmd {
@@ -208,7 +208,7 @@ func newSecretDelegate() secretDelegate {
 }
 
 func (m Model) leftPane(width, height int) string {
-	style := lipgloss.NewStyle().Width(width).Height(height)
+	style := m.theme.Pane(width, height)
 	if m.loading {
 		return style.Render(m.spinner.View() + " Loading secrets...")
 	}
@@ -216,18 +216,14 @@ func (m Model) leftPane(width, height int) string {
 }
 
 func (m Model) rightPane(width, height int) string {
-	style := lipgloss.NewStyle().Width(width).Height(height)
-
+	style := m.theme.Pane(width, height)
 	if m.inspectedError != nil {
 		return style.Render(fmt.Errorf("error inspecting secret: %w", m.inspectedError).Error())
 	}
-
 	if m.selected != nil && !m.loading {
 		return style.Render(m.inspectedSecretData)
 	}
-
 	return style.Render("Nothing yet selected, waiting.....")
-
 }
 
 func (m Model) renderErrorModal(msg string) string {
