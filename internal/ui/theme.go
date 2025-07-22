@@ -8,7 +8,7 @@ type ThemeProvider interface {
 	DocStyle() lipgloss.Style
 	ErrorModalWithWidth(width int) lipgloss.Style
 	SectionHeader() lipgloss.Style
-	Pane(width, height int) lipgloss.Style
+	Pane(selected bool, width, height int) lipgloss.Style
 	Key() lipgloss.Style
 	Value() lipgloss.Style
 }
@@ -22,7 +22,7 @@ type Theme struct {
 }
 
 var Default = Theme{
-	docStyle: lipgloss.NewStyle().Border(lipgloss.NormalBorder()).Padding(1),
+	docStyle: lipgloss.NewStyle(),
 
 	errorModal: lipgloss.NewStyle().
 		Border(lipgloss.RoundedBorder()).
@@ -46,7 +46,7 @@ var Default = Theme{
 	value: lipgloss.NewStyle().
 		Foreground(lipgloss.Color("#00FF00")).
 		MaxWidth(50).
-		PaddingLeft(1), // Same dark gray as main text for values
+		PaddingLeft(1), // Same dark gray as the main text for values
 
 }
 
@@ -58,10 +58,18 @@ func (t Theme) ErrorModalWithWidth(width int) lipgloss.Style {
 	return t.errorModal.Width(width)
 }
 
-func (t Theme) Pane(width, height int) lipgloss.Style {
-	return lipgloss.NewStyle().
+func (t Theme) Pane(selected bool, width, height int) lipgloss.Style {
+	base := lipgloss.NewStyle().
 		Width(width).
-		Height(height)
+		Height(height).Border(lipgloss.NormalBorder()).PaddingLeft(1)
+
+	if selected {
+		base = base.BorderForeground(lipgloss.Color("#00BFFF"))
+	} else {
+		base = base.BorderForeground(lipgloss.Color("#666666"))
+	}
+
+	return base
 }
 
 func (t Theme) SectionHeader() lipgloss.Style {
