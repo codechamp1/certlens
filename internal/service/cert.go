@@ -22,6 +22,7 @@ type CertificateRawInfo struct {
 	SerialNumber       string `label:"Serial Number"`
 	NotBefore          string `label:"Valid From"`
 	NotAfter           string `label:"Valid To"`
+	Signature          string `label:"Signature"`
 	SignatureAlgorithm string `label:"Signature Algorithm"`
 	PublicKeyAlgorithm string `label:"Public Key Algorithm"`
 	IsCA               bool   `label:"Is CA"`
@@ -43,6 +44,9 @@ type CertificateRawInfo struct {
 	// Usage
 	KeyUsage     string   `label:"Key Usage"`
 	ExtKeyUsages []string `label:"Extended Key Usage"`
+
+	// Certificate Version
+	Version int `label:"X.509 Version"`
 }
 
 type CertificateComputedInfo struct {
@@ -125,6 +129,7 @@ func parseCertificate(cert x509.Certificate) CertificateInfo {
 			SerialNumber:          cert.SerialNumber.String(),
 			NotBefore:             cert.NotBefore.Format(time.RFC1123),
 			NotAfter:              cert.NotAfter.Format(time.RFC1123),
+			Signature:             fmt.Sprintf("%X", cert.Signature),
 			SignatureAlgorithm:    cert.SignatureAlgorithm.String(),
 			PublicKeyAlgorithm:    cert.PublicKeyAlgorithm.String(),
 			IsCA:                  cert.IsCA,
@@ -138,6 +143,7 @@ func parseCertificate(cert x509.Certificate) CertificateInfo {
 			OCSPServers:           cert.OCSPServer,
 			KeyUsage:              keyUsageToString(cert.KeyUsage),
 			ExtKeyUsages:          extractExtendedKeyUsages(cert),
+			Version:               cert.Version,
 		},
 		CertificateComputedInfo: CertificateComputedInfo{
 			Expired:             time.Now().After(cert.NotAfter),
