@@ -3,14 +3,19 @@ package service
 import "certlens/internal/domains"
 
 type mockSecretService struct {
-	mockListTLSSecrets   func() ([]domains.K8SResourceID, error)
-	mockInspectTLSSecret func() (*CertificateInfo, error)
+	mockListTLSSecrets      func() ([]domains.K8SResourceID, error)
+	mockInspectTLSSecret    func() (*CertificateInfo, error)
+	mockRawInspectTLSSecret func() (string, error)
 }
 
-func NewMockSecretService(mockListTLSSecrets func() ([]domains.K8SResourceID, error), mockInspectTLSSecret func() (*CertificateInfo, error)) SecretsService {
+func NewMockSecretService(
+	mockListTLSSecrets func() ([]domains.K8SResourceID, error),
+	mockInspectTLSSecret func() (*CertificateInfo, error),
+	mockRawInspectTLSSecret func() (string, error)) SecretsService {
 	return mockSecretService{
-		mockInspectTLSSecret: mockInspectTLSSecret,
-		mockListTLSSecrets:   mockListTLSSecrets,
+		mockInspectTLSSecret:    mockInspectTLSSecret,
+		mockListTLSSecrets:      mockListTLSSecrets,
+		mockRawInspectTLSSecret: mockRawInspectTLSSecret,
 	}
 }
 
@@ -24,4 +29,8 @@ func (m mockSecretService) ListTLSSecrets(namespace string) ([]domains.K8SResour
 
 func (m mockSecretService) ListTLSSecret(namespace, name string) (domains.K8SResourceID, error) {
 	return domains.K8SResourceID{}, nil
+}
+
+func (m mockSecretService) RawInspectTLSSecret(namespace, name string) (string, error) {
+	return m.mockRawInspectTLSSecret()
 }
