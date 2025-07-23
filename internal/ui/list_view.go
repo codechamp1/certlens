@@ -3,6 +3,7 @@ package ui
 import (
 	"fmt"
 
+	"github.com/atotto/clipboard"
 	"github.com/charmbracelet/bubbles/key"
 	"github.com/charmbracelet/bubbles/list"
 	"github.com/charmbracelet/bubbles/spinner"
@@ -31,6 +32,14 @@ type secretLoadedMsg struct {
 type inspectTLSSecretMsg struct{}
 type loadingStartedMsg struct{}
 
+type loadSecretsMsg struct{}
+
+type copyCertMsg struct{}
+
+type switchCertViewMsg struct{}
+
+type switchPaneMsg struct{}
+
 type errorMsg struct{ err error }
 
 type secretDelegate struct {
@@ -51,10 +60,10 @@ type Model struct {
 	inspectedViewport viewport.Model
 	layout            modelLayout
 	loading           bool
+	inspectRaw        bool
 	selectedPane      Pane
 	secrets           list.Model
 	selected          *secretItem
-	showingErrorModal bool
 	spinner           spinner.Model
 	inspectedError    error
 	name              string
@@ -80,52 +89,70 @@ func NewModel(svc service.SecretsService, namespace, name string) (Model, error)
 }
 
 func (m Model) Init() tea.Cmd {
-	return tea.Batch(m.spinner.Tick, loadSecretsCmd(m))
+	return tea.Batch(m.spinner.Tick, func() tea.Msg { return loadSecretsMsg{} })
 }
 
 func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	var cmds []tea.Cmd
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
-		if m.showingErrorModal {
-			m.showingErrorModal = false
-			m.errorModalMsg = ""
-		}
-		switch msg.String() {
-		case "q", "ctrl+c":
+		if m.errorModalMsg != "" {
 			return m, tea.Quit
-		case "u":
-			if m.secrets.FilterState() != list.Filtering {
-				return m, loadSecretsCmd(m)
-			}
-		case "tab", "p":
-			if m.secrets.FilterState() != list.Filtering {
-				m.selectedPane = nextPane(m.selectedPane)
+		}
+
+		keyStr := msg.String()
+
+		if keyStr == "ctrl+c" {
+			return m, tea.Quit
+		}
+
+		if m.secrets.FilterState() != list.Filtering {
+			switch keyStr {
+			case "q", "ctrl+c":
+				return m, tea.Quit
+			case "u":
+				cmds = append(cmds, func() tea.Msg { return loadSecretsMsg{} })
+			case "tab", "p":
+				cmds = append(cmds, func() tea.Msg { return switchPaneMsg{} })
+			case "r":
+				cmds = append(cmds, func() tea.Msg { return switchCertViewMsg{} })
+			case "c":
+				cmds = append(cmds, func() tea.Msg { return copyCertMsg{} })
 			}
 		}
+
 	case tea.WindowSizeMsg:
 		m.updateLayout(msg.Width, msg.Height)
+	case copyCertMsg:
+		data, err := m.secretService.RawInspectTLSSecret(m.selected.namespace, m.selected.name)
+		if err != nil {
+			m.errorModalMsg = fmt.Sprintf("Error copying secret: %v", err)
+		}
+		if err := clipboard.WriteAll(data); err != nil {
+			m.errorModalMsg = fmt.Sprintf("Error copying secret: %v", err)
+		}
 	case secretsLoadedMsg:
 		m.secrets.SetItems(msg.secrets)
 		m.loading = false
 	case secretLoadedMsg:
 		m.secrets.SetItems([]list.Item{msg.secret})
 		m.loading = false
+	case switchCertViewMsg:
+		m.inspectRaw = !m.inspectRaw
+		cmds = append(cmds, func() tea.Msg { return inspectTLSSecretMsg{} })
+	case switchPaneMsg:
+		m.selectedPane = nextPane(m.selectedPane)
+	case loadSecretsMsg:
+		cmds = append(cmds, loadSecretsCmd(m))
 	case loadingStartedMsg:
 		m.loading = true
 		cmds = append(cmds, m.spinner.Tick)
 	case inspectTLSSecretMsg:
-		data, err := m.secretService.InspectTLSSecret(m.selected.namespace, m.selected.name)
-		if err != nil {
-			m.inspectedError = fmt.Errorf("failed to inspect secret %s/%s: %w", m.selected.namespace, m.selected.name, err)
-			return m, nil
-		}
+		data, err := m.inspectedTLSSecretContent(m.selected.namespace, m.selected.name, m.inspectRaw)
 		m.inspectedError = err
-		rendered := formatCertificateInfo(*data, m.theme)
-		m.inspectedViewport.SetContent(rendered)
+		m.inspectedViewport.SetContent(data)
 	case errorMsg:
 		m.loading = false
-		m.showingErrorModal = true
 		m.errorModalMsg = fmt.Sprintf("Error: %v", msg.err)
 	}
 
@@ -162,7 +189,7 @@ func (m Model) View() string {
 	left := m.leftPane(m.layout.LeftPaneWidth, m.layout.UsableHeight)
 	right := m.rightPane(m.layout.RightPaneWidth, m.layout.UsableHeight)
 
-	if m.showingErrorModal && m.errorModalMsg != "" {
+	if m.errorModalMsg != "" {
 		return m.renderErrorModal(m.errorModalMsg)
 	}
 
@@ -207,8 +234,18 @@ func newSecretDelegate() secretDelegate {
 		key.WithHelp("u", "refresh secrets"),
 	)
 
+	switchCertViewKey := key.NewBinding(
+		key.WithKeys("r"),
+		key.WithHelp("r", "switch between raw and formatted view"),
+	)
+
+	copyCertKey := key.NewBinding(
+		key.WithKeys("c"),
+		key.WithHelp("c", "copy certificate to clipboard"),
+	)
+
 	delegate.ShortHelpFunc = func() []key.Binding { return []key.Binding{refreshKey} }
-	delegate.FullHelpFunc = func() [][]key.Binding { return [][]key.Binding{{refreshKey}} }
+	delegate.FullHelpFunc = func() [][]key.Binding { return [][]key.Binding{{refreshKey, switchCertViewKey, copyCertKey}} }
 
 	// TODO: use the theme styles
 	delegate.Styles.NormalTitle = delegate.Styles.NormalTitle.Foreground(lipgloss.Color("#00BFFF"))
@@ -246,4 +283,26 @@ func nextPane(currentPane Pane) Pane {
 		return RightPane
 	}
 	return LeftPane
+}
+
+func (m Model) inspectedTLSSecretContent(namespace, name string, raw bool) (string, error) {
+	var (
+		content string
+		err     error
+	)
+
+	if raw {
+		content, err = m.secretService.RawInspectTLSSecret(namespace, name)
+	} else {
+		var cert *service.CertificateInfo
+		cert, err = m.secretService.InspectTLSSecret(namespace, name)
+		if err == nil {
+			content = formatCertificateInfo(*cert, m.theme)
+		}
+	}
+
+	if err != nil {
+		return "", fmt.Errorf("failed to inspect secret %s/%s: %w", namespace, name, err)
+	}
+	return content, nil
 }
