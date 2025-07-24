@@ -106,18 +106,44 @@ func (s Status) String() string {
 	return "Unknown"
 }
 
-func parseCertFromString(pemStr string) (*x509.Certificate, error) {
-	block, _ := pem.Decode([]byte(pemStr))
-	if block == nil || block.Type != "CERTIFICATE" {
-		return nil, fmt.Errorf("failed to decode PEM block containing certificate")
+func parseCertsFromString(pemStr string) ([]*x509.Certificate, error) {
+	var certs []*x509.Certificate
+	data := []byte(pemStr)
+
+	for {
+		block, rest := pem.Decode(data)
+		if block == nil {
+			break // no more blocks
+		}
+
+		if block.Type != "CERTIFICATE" {
+			data = rest
+			continue // skip non-cert blocks
+		}
+
+		cert, err := x509.ParseCertificate(block.Bytes)
+		if err != nil {
+			return nil, fmt.Errorf("failed to parse x509 certificate: %w", err)
+		}
+
+		certs = append(certs, cert)
+		data = rest
 	}
 
-	cert, err := x509.ParseCertificate(block.Bytes)
-	if err != nil {
-		return nil, fmt.Errorf("failed to parse x509 certificate: %w", err)
+	if len(certs) == 0 {
+		return nil, fmt.Errorf("no certificates found in input")
 	}
 
-	return cert, nil
+	return certs, nil
+}
+
+func parseCertificates(certs []*x509.Certificate) []CertificateInfo {
+	var certInfos []CertificateInfo
+	for _, cert := range certs {
+		certInfo := parseCertificate(*cert)
+		certInfos = append(certInfos, certInfo)
+	}
+	return certInfos
 }
 
 func parseCertificate(cert x509.Certificate) CertificateInfo {

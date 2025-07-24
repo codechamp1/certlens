@@ -6,6 +6,7 @@ import (
 	"github.com/atotto/clipboard"
 	"github.com/charmbracelet/bubbles/key"
 	"github.com/charmbracelet/bubbles/list"
+	"github.com/charmbracelet/bubbles/paginator"
 	"github.com/charmbracelet/bubbles/spinner"
 	"github.com/charmbracelet/bubbles/viewport"
 	tea "github.com/charmbracelet/bubbletea"
@@ -56,6 +57,8 @@ func (s secretItem) Description() string { return "Namespace: " + s.namespace }
 func (s secretItem) FilterValue() string { return s.name }
 
 type Model struct {
+	certViews         []string
+	certPages         paginator.Model
 	errorModalMsg     string
 	inspectedViewport viewport.Model
 	layout            modelLayout
@@ -77,6 +80,7 @@ func NewModel(svc service.SecretsService, namespace, name string) (Model, error)
 	secretsList := list.New(items, newSecretDelegate(), 50, 20)
 	secretsList.Title = "Select a TLS Secret"
 	return Model{
+		certPages:         paginator.New(),
 		inspectedViewport: viewport.New(50, 20), // Will be updated later,
 		name:              name,
 		namespace:         namespace,
@@ -105,7 +109,16 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if keyStr == "ctrl+c" {
 			return m, tea.Quit
 		}
-
+		if m.selectedPane == RightPane {
+			switch keyStr {
+			case "left":
+				m.certPages.PrevPage()
+				m.inspectedViewport.SetContent(m.certViews[m.certPages.Page] + "\n\n" + m.certPages.View())
+			case "right":
+				m.certPages.NextPage()
+				m.inspectedViewport.SetContent(m.certViews[m.certPages.Page] + "\n\n" + m.certPages.View())
+			}
+		}
 		if m.secrets.FilterState() != list.Filtering {
 			switch keyStr {
 			case "q", "ctrl+c":
@@ -149,8 +162,11 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		cmds = append(cmds, m.spinner.Tick)
 	case inspectTLSSecretMsg:
 		data, err := m.inspectedTLSSecretContent(m.selected.namespace, m.selected.name, m.inspectRaw)
+		m.certViews = data
 		m.inspectedError = err
-		m.inspectedViewport.SetContent(data)
+		m.certPages.SetTotalPages(len(data))
+		m.certPages.Page = 0
+		m.inspectedViewport.SetContent(m.certViews[m.certPages.Page] + "\n\n" + m.certPages.View())
 	case errorMsg:
 		m.loading = false
 		m.errorModalMsg = fmt.Sprintf("Error: %v", msg.err)
@@ -285,24 +301,23 @@ func nextPane(currentPane Pane) Pane {
 	return LeftPane
 }
 
-func (m Model) inspectedTLSSecretContent(namespace, name string, raw bool) (string, error) {
-	var (
-		content string
-		err     error
-	)
-
+func (m *Model) inspectedTLSSecretContent(namespace, name string, raw bool) ([]string, error) {
 	if raw {
-		content, err = m.secretService.RawInspectTLSSecret(namespace, name)
-	} else {
-		var cert *service.CertificateInfo
-		cert, err = m.secretService.InspectTLSSecret(namespace, name)
-		if err == nil {
-			content = formatCertificateInfo(*cert, m.theme)
+		content, err := m.secretService.RawInspectTLSSecret(namespace, name)
+		if err != nil {
+			return nil, fmt.Errorf("failed to inspect secret %s/%s: %w", namespace, name, err)
 		}
+		return []string{content}, nil // o singură pagină
 	}
 
+	certs, err := m.secretService.InspectTLSSecret(namespace, name)
 	if err != nil {
-		return "", fmt.Errorf("failed to inspect secret %s/%s: %w", namespace, name, err)
+		return nil, fmt.Errorf("failed to inspect secret %s/%s: %w", namespace, name, err)
 	}
-	return content, nil
+
+	var views []string
+	for _, cert := range certs {
+		views = append(views, formatCertificateInfo(cert, m.theme))
+	}
+	return views, nil
 }

@@ -12,7 +12,7 @@ import (
 )
 
 type Client struct {
-	clientset *kubernetes.Clientset
+	clientset kubernetes.Interface
 }
 
 type SecretsFetcher interface {
@@ -65,7 +65,6 @@ func buildConfigWithContext(context string, kubeconfigPath string) (*rest.Config
 	} else {
 		loadingRules = clientcmd.NewDefaultClientConfigLoadingRules()
 	}
-
 	return clientcmd.NewNonInteractiveDeferredLoadingClientConfig(
 		loadingRules,
 		&clientcmd.ConfigOverrides{
