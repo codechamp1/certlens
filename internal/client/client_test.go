@@ -45,7 +45,7 @@ func TestFetchSecrets(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			k8sClient := fake.NewClientset(tt.secrets...)
 			if tt.expectedErr != nil {
-				k8sClient.Fake.PrependReactor("list", "secrets", func(action k8sTesting.Action) (bool, runtime.Object, error) {
+				k8sClient.PrependReactor("list", "secrets", func(action k8sTesting.Action) (bool, runtime.Object, error) {
 					return true, nil, tt.expectedErr
 				})
 			}
@@ -97,7 +97,7 @@ func TestClient_FetchSecret(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			k8sClient := fake.NewClientset(tt.secret)
 			if tt.expectedErr != nil {
-				k8sClient.Fake.PrependReactor("get", "secrets", func(action k8sTesting.Action) (bool, runtime.Object, error) {
+				k8sClient.PrependReactor("get", "secrets", func(action k8sTesting.Action) (bool, runtime.Object, error) {
 					return true, nil, tt.expectedErr
 				})
 			}

@@ -18,7 +18,7 @@ func TestNewSecretsService(t *testing.T) {
 	if svc == nil {
 		t.Error("secrets service should not be nil")
 	}
-	//nolint:gosimple
+	//nolint
 	if _, ok := svc.(service.SecretsService); !ok {
 		t.Error("secrets service should implement SecretsService interface")
 	}

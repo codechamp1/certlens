@@ -57,7 +57,7 @@ func (s secretsService) ListTLSSecrets(namespace string) ([]domains.K8SResourceI
 }
 
 func (s secretsService) ListTLSSecret(namespace, name string) (domains.K8SResourceID, error) {
-	secret, err := s.SecretsRepository.GetTLSSecret(namespace, name)
+	secret, err := s.GetTLSSecret(namespace, name)
 	if err != nil {
 		return domains.K8SResourceID{}, fmt.Errorf("failed to get TLS secret %s in namespace %s: %w", name, namespace, err)
 	}
