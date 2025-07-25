@@ -1,4 +1,4 @@
-module certlens
+module github.com/codechamp1/certlens
 
 go 1.24.0
 

@@ -8,7 +8,7 @@ import (
 
 	"github.com/charmbracelet/lipgloss"
 
-	"certlens/internal/service"
+	"github.com/codechamp1/certlens/internal/service"
 )
 
 type CertField struct {

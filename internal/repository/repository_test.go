@@ -8,9 +8,9 @@ import (
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	"certlens/internal/client"
-	"certlens/internal/domains"
-	"certlens/internal/repository"
+	"github.com/codechamp1/certlens/internal/client"
+	"github.com/codechamp1/certlens/internal/domains"
+	"github.com/codechamp1/certlens/internal/repository"
 )
 
 var errTest = errors.New("simulated error")

@@ -5,8 +5,8 @@ import (
 
 	corev1 "k8s.io/api/core/v1"
 
-	"certlens/internal/client"
-	"certlens/internal/domains"
+	"github.com/codechamp1/certlens/internal/client"
+	"github.com/codechamp1/certlens/internal/domains"
 )
 
 type SecretsRepository interface {

@@ -1,6 +1,6 @@
 package service
 
-import "certlens/internal/domains"
+import "github.com/codechamp1/certlens/internal/domains"
 
 type mockSecretService struct {
 	mockListTLSSecrets      func(namespace string) ([]domains.K8SResourceID, error)

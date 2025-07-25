@@ -7,11 +7,11 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 
-	"certlens/configs"
-	"certlens/internal/client"
-	"certlens/internal/repository"
-	"certlens/internal/service"
-	"certlens/internal/ui"
+	"github.com/codechamp1/certlens/configs"
+	"github.com/codechamp1/certlens/internal/client"
+	"github.com/codechamp1/certlens/internal/repository"
+	"github.com/codechamp1/certlens/internal/service"
+	"github.com/codechamp1/certlens/internal/ui"
 )
 
 func main() {

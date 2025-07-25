@@ -1,6 +1,6 @@
 package repository
 
-import "certlens/internal/domains"
+import "github.com/codechamp1/certlens/internal/domains"
 
 type mockRepository struct {
 	mockGetTLSSecrets func(namespace string) ([]domains.SecretInfo, error)

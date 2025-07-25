@@ -5,9 +5,9 @@ import (
 	"reflect"
 	"testing"
 
-	"certlens/internal/domains"
-	"certlens/internal/repository"
-	"certlens/internal/service"
+	"github.com/codechamp1/certlens/internal/domains"
+	"github.com/codechamp1/certlens/internal/repository"
+	"github.com/codechamp1/certlens/internal/service"
 )
 
 var errRepo = errors.New("simulated error")

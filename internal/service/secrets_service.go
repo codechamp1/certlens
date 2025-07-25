@@ -3,8 +3,8 @@ package service
 import (
 	"fmt"
 
-	"certlens/internal/domains"
-	"certlens/internal/repository"
+	"github.com/codechamp1/certlens/internal/domains"
+	"github.com/codechamp1/certlens/internal/repository"
 )
 
 type SecretsService interface {
