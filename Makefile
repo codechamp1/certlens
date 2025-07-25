@@ -15,8 +15,12 @@ test:
 cover: test
 	$(GO) tool cover -html=coverage.out
 
+
+install-lint:
+	curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(shell go env GOPATH)/bin
+
 # Rulează linterul golangci-lint (trebuie instalat golangci-lint)
-lint:
+lint: install-lint
 	golangci-lint run
 
 # Curățenie - șterge binarele și fișierele generate
