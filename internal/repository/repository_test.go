@@ -22,6 +22,7 @@ func TestNewSecretsRepository(t *testing.T) {
 		if repo == nil {
 			t.Error("Expected repository to be created, but got nil")
 		}
+		//nolint:gosimple
 		if _, ok := repo.(repository.SecretsRepository); !ok {
 			t.Error("Expected repository to implement SecretsRepository interface, but it does not")
 		}

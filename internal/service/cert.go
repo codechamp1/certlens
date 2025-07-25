@@ -173,10 +173,10 @@ func parseCertificate(cert x509.Certificate) CertificateInfo {
 		},
 		CertificateComputedInfo: CertificateComputedInfo{
 			Expired:             time.Now().After(cert.NotAfter),
-			TimeUntilExpiry:     cert.NotAfter.Sub(time.Now()),
+			TimeUntilExpiry:     time.Until(cert.NotAfter),
 			TotalValidity:       cert.NotAfter.Sub(cert.NotBefore),
-			TimeSinceIssued:     time.Now().Sub(cert.NotBefore),
-			ValidityUsedPercent: float64(time.Now().Sub(cert.NotBefore)) / float64(cert.NotAfter.Sub(cert.NotBefore)) * 100,
+			TimeSinceIssued:     time.Since(cert.NotBefore),
+			ValidityUsedPercent: float64(time.Since(cert.NotBefore)) / float64(cert.NotAfter.Sub(cert.NotBefore)) * 100,
 			RemainingPercent:    percent,
 			ExpiryStatus:        status.String(),
 			IsSelfSigned:        cert.CheckSignatureFrom(&cert) == nil,
