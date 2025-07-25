@@ -31,4 +31,8 @@ run: build
 install:
 	$(GO) install ./cmd/$(BINARY_NAME)/
 
+action: lint test
+	@echo " ✅ All checks passed "
+
+
 .PHONY: build test cover lint clean run install
