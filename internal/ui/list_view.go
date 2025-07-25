@@ -35,7 +35,9 @@ type loadingStartedMsg struct{}
 
 type loadSecretsMsg struct{}
 
-type copyCertMsg struct{}
+type copyMsg struct {
+	key bool
+}
 
 type switchCertViewMsg struct{}
 
@@ -130,18 +132,27 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			case "r":
 				cmds = append(cmds, func() tea.Msg { return switchCertViewMsg{} })
 			case "c":
-				cmds = append(cmds, func() tea.Msg { return copyCertMsg{} })
+				cmds = append(cmds, func() tea.Msg { return copyMsg{} })
+			case "C":
+				cmds = append(cmds, func() tea.Msg { return copyMsg{key: true} })
 			}
 		}
 
 	case tea.WindowSizeMsg:
 		m.updateLayout(msg.Width, msg.Height)
-	case copyCertMsg:
-		data, err := m.secretService.RawInspectTLSSecret(m.selected.namespace, m.selected.name)
+	case copyMsg:
+		var copyData string
+		tlsCert, tlsKey, err := m.secretService.RawInspectTLSSecret(m.selected.namespace, m.selected.name)
 		if err != nil {
 			m.errorModalMsg = fmt.Sprintf("Error copying secret: %v", err)
 		}
-		if err := clipboard.WriteAll(data); err != nil {
+		switch {
+		case msg.key:
+			copyData = tlsKey
+		default:
+			copyData = tlsCert
+		}
+		if err := clipboard.WriteAll(copyData); err != nil {
 			m.errorModalMsg = fmt.Sprintf("Error copying secret: %v", err)
 		}
 	case secretsLoadedMsg:
@@ -301,13 +312,13 @@ func nextPane(currentPane Pane) Pane {
 	return LeftPane
 }
 
-func (m *Model) inspectedTLSSecretContent(namespace, name string, raw bool) ([]string, error) {
+func (m Model) inspectedTLSSecretContent(namespace, name string, raw bool) ([]string, error) {
 	if raw {
-		content, err := m.secretService.RawInspectTLSSecret(namespace, name)
+		tlsCert, tlsKey, err := m.secretService.RawInspectTLSSecret(namespace, name)
 		if err != nil {
 			return nil, fmt.Errorf("failed to inspect secret %s/%s: %w", namespace, name, err)
 		}
-		return []string{content}, nil // o singură pagină
+		return []string{tlsCert, tlsKey}, nil // o singură pagină
 	}
 
 	certs, err := m.secretService.InspectTLSSecret(namespace, name)

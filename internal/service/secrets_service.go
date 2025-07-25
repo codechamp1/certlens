@@ -11,7 +11,7 @@ type SecretsService interface {
 	InspectTLSSecret(namespace, name string) ([]CertificateInfo, error)
 	ListTLSSecrets(namespace string) ([]domains.K8SResourceID, error)
 	ListTLSSecret(namespace, name string) (domains.K8SResourceID, error)
-	RawInspectTLSSecret(namespace, name string) (string, error)
+	RawInspectTLSSecret(namespace, name string) (string, string, error)
 }
 
 type secretsService struct {
@@ -65,11 +65,11 @@ func (s secretsService) ListTLSSecret(namespace, name string) (domains.K8SResour
 	return domains.K8SResourceID{Name: secret.Name, Namespace: secret.Namespace}, nil
 }
 
-func (s secretsService) RawInspectTLSSecret(namespace, name string) (string, error) {
+func (s secretsService) RawInspectTLSSecret(namespace, name string) (cert string, key string, err error) {
 	secret, err := s.GetTLSSecret(namespace, name)
 	if err != nil {
-		return "", fmt.Errorf("can not inspect TLS secret: %w", err)
+		return "", "", fmt.Errorf("can not inspect TLS secret: %w", err)
 	}
 
-	return string(secret.TLSCert), nil
+	return string(secret.TLSCert), string(secret.TLSKey), nil
 }

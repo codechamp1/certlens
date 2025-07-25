@@ -6,14 +6,14 @@ type mockSecretService struct {
 	mockListTLSSecrets      func(namespace string) ([]domains.K8SResourceID, error)
 	mockListTLSSecret       func(namespace, name string) (domains.K8SResourceID, error)
 	mockInspectTLSSecret    func(namespace, name string) ([]CertificateInfo, error)
-	mockRawInspectTLSSecret func(namespace, name string) (string, error)
+	mockRawInspectTLSSecret func(namespace, name string) (string, string, error)
 }
 
 func NewMockSecretService(
 	mockListTLSSecrets func(namespace string) ([]domains.K8SResourceID, error),
 	mockListTLSSecret func(namespace, name string) (domains.K8SResourceID, error),
 	mockInspectTLSSecret func(namespace, name string) ([]CertificateInfo, error),
-	mockRawInspectTLSSecret func(namespace, name string) (string, error)) SecretsService {
+	mockRawInspectTLSSecret func(namespace, name string) (string, string, error)) SecretsService {
 	return mockSecretService{
 		mockInspectTLSSecret:    mockInspectTLSSecret,
 		mockListTLSSecret:       mockListTLSSecret,
@@ -34,6 +34,6 @@ func (m mockSecretService) ListTLSSecret(namespace, name string) (domains.K8SRes
 	return m.mockListTLSSecret(namespace, name)
 }
 
-func (m mockSecretService) RawInspectTLSSecret(namespace, name string) (string, error) {
+func (m mockSecretService) RawInspectTLSSecret(namespace, name string) (string, string, error) {
 	return m.mockRawInspectTLSSecret(namespace, name)
 }

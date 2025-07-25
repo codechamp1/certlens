@@ -145,6 +145,7 @@ func TestRawInspectTLSSecret(t *testing.T) {
 		secretName      string
 		secret          domains.SecretInfo
 		expectedCert    string
+		expectedKey     string
 		expectedRepoErr error
 	}{
 		{
@@ -153,6 +154,7 @@ func TestRawInspectTLSSecret(t *testing.T) {
 			secretName:      "",
 			secret:          domains.SecretInfo{},
 			expectedCert:    "",
+			expectedKey:     "",
 			expectedRepoErr: errRepo,
 		},
 		{
@@ -166,6 +168,7 @@ func TestRawInspectTLSSecret(t *testing.T) {
 				TLSKey:    []byte("key-data"),
 			},
 			expectedCert:    "cert-data",
+			expectedKey:     "key-data",
 			expectedRepoErr: nil,
 		},
 	}
@@ -177,7 +180,7 @@ func TestRawInspectTLSSecret(t *testing.T) {
 			})
 
 			svc := service.NewSecretsService(mockRepo)
-			cert, err := svc.RawInspectTLSSecret(tt.namespace, tt.secretName)
+			cert, key, err := svc.RawInspectTLSSecret(tt.namespace, tt.secretName)
 
 			if !errors.Is(err, tt.expectedRepoErr) {
 				t.Errorf("expected error %v, got %v", tt.expectedRepoErr, err)
@@ -185,6 +188,10 @@ func TestRawInspectTLSSecret(t *testing.T) {
 
 			if cert != tt.expectedCert {
 				t.Errorf("expected cert %s, got %s", tt.expectedCert, cert)
+			}
+
+			if key != tt.expectedKey {
+				t.Errorf("expected key %s, got %s", tt.expectedCert, cert)
 			}
 		})
 	}
