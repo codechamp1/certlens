@@ -1,4 +1,4 @@
-name: Run Makefile CI
+name: Run Action CI
 
 on:
   pull_request:
