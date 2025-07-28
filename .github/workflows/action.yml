@@ -18,6 +18,11 @@ jobs:
 
       - name: Setup Go
         uses: actions/setup-go@v5
+        with:
+          go-version: stable
 
-      - name: Run make action
-        run: make action
+      - name: Run golangci-lint
+        uses: golangci/golangci-lint-action@v8
+
+      - name: Run tests
+        run: make test
