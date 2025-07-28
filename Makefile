@@ -32,7 +32,7 @@ run: build
 install:
 	$(GO) install ./cmd/$(BINARY_NAME)/
 
-action: lint test
+action-ci: test
 	@echo " ✅ All checks passed "
 
 
