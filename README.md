@@ -9,6 +9,7 @@
 - Copy certificate or private key data to clipboard 
 
 ## Demo
+https://github.com/user-attachments/assets/6ffaf013-ab4a-409d-8a27-47902a7f03a9
 
 
 ## Installation
