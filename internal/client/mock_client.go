@@ -7,7 +7,7 @@ type mockSecretsFetcher struct {
 	mockFetchSecret  func(namespace, name string) (*corev1.Secret, error)
 }
 
-func NewSecretsFetcher(
+func NewMockSecretsFetcher(
 	mockGetTLSSecrets func(namespace string) (*corev1.SecretList, error),
 	mockGetTLSSecret func(namespace, name string) (*corev1.Secret, error),
 ) SecretsFetcher {

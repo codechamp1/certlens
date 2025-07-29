@@ -20,7 +20,7 @@ type SecretsFetcher interface {
 	FetchSecret(namespace, name string) (*corev1.Secret, error)
 }
 
-func NewClient(kubeconfig, context string) (*Client, error) {
+func newClient(kubeconfig, context string) (*Client, error) {
 	config, err := buildConfigWithContext(context, kubeconfig)
 
 	if err != nil {
@@ -36,6 +36,16 @@ func NewClient(kubeconfig, context string) (*Client, error) {
 	return &Client{
 		clientset: clientset,
 	}, nil
+}
+
+func NewSecretsFetcher(kubeconfig, context string) (SecretsFetcher, error) {
+	client, err := newClient(kubeconfig, context)
+
+	if err != nil {
+		return nil, fmt.Errorf("error creating client: %w", err)
+	}
+
+	return client, nil
 }
 
 func (c Client) FetchSecrets(namespace string) (*corev1.SecretList, error) {

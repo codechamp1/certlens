@@ -11,6 +11,7 @@ type ThemeProvider interface {
 	Pane(selected bool, width, height int) lipgloss.Style
 	Key() lipgloss.Style
 	Value() lipgloss.Style
+	Help(width int) lipgloss.Style
 }
 
 type Theme struct {
@@ -82,4 +83,9 @@ func (t Theme) Key() lipgloss.Style {
 
 func (t Theme) Value() lipgloss.Style {
 	return t.value
+}
+
+func (t Theme) Help(width int) lipgloss.Style {
+	return lipgloss.NewStyle().
+		Foreground(lipgloss.Color("#888")).MarginLeft(1).Width(width)
 }

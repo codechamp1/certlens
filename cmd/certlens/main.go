@@ -17,7 +17,7 @@ import (
 func main() {
 	config := configs.Load()
 
-	kubeClient, err := client.NewClient(config.KubeConfigPath, config.Context)
+	kubeClient, err := client.NewSecretsFetcher(config.KubeConfigPath, config.Context)
 
 	if err != nil {
 		log.Fatalf("Failed to create Kubernetes client: %v", err)

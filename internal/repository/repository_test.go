@@ -17,7 +17,7 @@ var errTest = errors.New("simulated error")
 
 func TestNewSecretsRepository(t *testing.T) {
 	t.Run("Should create a repository with the given client", func(t *testing.T) {
-		mockClient := client.NewSecretsFetcher(nil, nil)
+		mockClient := client.NewMockSecretsFetcher(nil, nil)
 		repo := repository.NewSecretsRepository(mockClient)
 		if repo == nil {
 			t.Error("Expected repository to be created, but got nil")
@@ -99,7 +99,7 @@ func TestGetTLSSecrets(t *testing.T) {
 
 	for _, tt := range test {
 		t.Run(tt.name, func(t *testing.T) {
-			mockClient := client.NewSecretsFetcher(
+			mockClient := client.NewMockSecretsFetcher(
 				func(namespace string) (*v1.SecretList, error) {
 					return &tt.secrets, tt.expectedErr
 				},
@@ -178,7 +178,7 @@ func TestGetTLSSecret(t *testing.T) {
 
 	for _, tt := range test {
 		t.Run(tt.name, func(t *testing.T) {
-			mockClient := client.NewSecretsFetcher(
+			mockClient := client.NewMockSecretsFetcher(
 				nil,
 				func(namespace, name string) (*v1.Secret, error) {
 					return &tt.secret, tt.expectedErr

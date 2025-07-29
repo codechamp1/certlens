@@ -1,6 +1,8 @@
 package ui
 
-type modelLayout struct {
+import "github.com/charmbracelet/lipgloss"
+
+type uiLayout struct {
 	TotalWidth     int
 	TotalHeight    int
 	UsableWidth    int
@@ -9,18 +11,18 @@ type modelLayout struct {
 	RightPaneWidth int
 }
 
-func (m *Model) updateLayout(width, height int) {
-	hPadding, vPadding := m.theme.DocStyle().GetFrameSize()
+func calculateLayout(width, height int, docStyle lipgloss.Style) uiLayout {
+	hPadding, vPadding := docStyle.GetFrameSize()
 
 	// for border top
-	usableH := height - vPadding - 2
+	usableH := height - vPadding - 3
 	usableW := width - hPadding
 
 	// for border left and right
 	left := usableW/2 - 2
 	right := usableW - left - 4
 
-	m.layout = modelLayout{
+	return uiLayout{
 		LeftPaneWidth:  left,
 		RightPaneWidth: right,
 		UsableWidth:    usableW,
@@ -28,8 +30,4 @@ func (m *Model) updateLayout(width, height int) {
 		TotalHeight:    height,
 		TotalWidth:     width,
 	}
-
-	m.secrets.SetSize(left, usableH)
-	m.inspectedViewport.Width = right
-	m.inspectedViewport.Height = usableH
 }
