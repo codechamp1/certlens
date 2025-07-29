@@ -30,7 +30,7 @@ This will build the binary and place it in your `$GOPATH/bin` directory.
 certlens [flags]
 ```
 
-## Flags
+### Flags
 ```bash
 certlens --help
 Usage of certlens:
