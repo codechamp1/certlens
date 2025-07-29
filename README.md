@@ -39,6 +39,8 @@ Usage of certlens:
   -kubeconfig string
         path to a kubeconfig (default "~/.kube/config")
         name of the secret to lens, if not set, all secrets will be listed
+  -name string
+        name of the secret to lens, if not set, all secrets will be listed
   -namespace string
         namespace to lens, if not set, all namespaces will be used
 ```
