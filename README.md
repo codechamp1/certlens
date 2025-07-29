@@ -42,7 +42,7 @@ Usage of certlens:
         namespace to lens, if not set, all namespaces will be used
 ```
 
-## Example
+### Example
 ```bash
 certlens -kubeconfig ~/.kube/config -namespace my-namespace
 ```
