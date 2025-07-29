@@ -1,4 +1,4 @@
-name: Run Makefile CI
+name: Run Action CI
 
 on:
   pull_request:
@@ -18,6 +18,11 @@ jobs:
 
       - name: Setup Go
         uses: actions/setup-go@v5
+        with:
+          go-version: stable
 
-      - name: Run make action
-        run: make action
+      - name: Run golangci-lint
+        uses: golangci/golangci-lint-action@v8
+
+      - name: Run CI
+        run: make action-ci
