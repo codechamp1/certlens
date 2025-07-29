@@ -38,6 +38,7 @@ Usage of certlens:
         context to use from kubeconfig, if not set, the current context will be used
   -kubeconfig string
         path to a kubeconfig (default "~/.kube/config")
+  -name string
         name of the secret to lens, if not set, all secrets will be listed
   -namespace string
         namespace to lens, if not set, all namespaces will be used
