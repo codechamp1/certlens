@@ -3,7 +3,7 @@
 
 ## Features
 - Inspect Kubernetes TLS Secrets interactively in the terminal
-- View both raw/formatted PEM data with additional computed certificate details (expiry status, time until expiry, validity used, self-signed...)
+- View both raw/formatted PEM data with additional computed certificate details (expiry status, time until expiry, validity used, self-signed and much more..)
 - Navigate certificate chains in a single TLS secret
 - Paginated and filterable secrets list for easy navigation
 - Copy certificate or private key data to clipboard 
