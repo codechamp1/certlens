@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - main
+      - add-release-action
 
 jobs:
   release:
