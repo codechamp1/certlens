@@ -1,0 +1,33 @@
+plugins:
+  certlens-selected:
+    description: "Lens TLS Secret"
+    shortCut: Shift-I
+    command: "certlens"
+    background: false
+    confirm: false
+    args:
+      - --name
+      - $NAME
+      - --namespace
+      - $NAMESPACE
+      - --context
+      - $CONTEXT
+      - --kubeconfig
+      - $KUBECONFIG
+    scope:
+      - secrets
+  certlens-namespace:
+    description: "Lens TLS Secrets"
+    shortCut: Shift-L
+    command: "certlens"
+    background: false
+    confirm: false
+    args:
+      - --namespace
+      - $NAMESPACE
+      - --context
+      - $CONTEXT
+      - --kubeconfig
+      - $KUBECONFIG
+    scope:
+      - secrets
