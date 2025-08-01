@@ -106,7 +106,7 @@ func (s Status) String() string {
 	return "Unknown"
 }
 
-func parseCertsFromString(pemStr string) ([]*x509.Certificate, error) {
+func ParseCertsFromString(pemStr string) ([]*x509.Certificate, error) {
 	var certs []*x509.Certificate
 	data := []byte(pemStr)
 

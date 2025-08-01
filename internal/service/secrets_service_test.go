@@ -29,14 +29,14 @@ func TestListTLSSecrets(t *testing.T) {
 		name              string
 		namespace         string
 		secrets           []domains.SecretInfo
-		expectedSecretIDs []domains.K8SResourceID
+		expectedSecretIDs []domains.SecretInfo
 		expectedRepoErr   error
 	}{
 		{
 			name:              "Should return error if can not fetch secrets",
 			namespace:         "",
 			secrets:           []domains.SecretInfo{},
-			expectedSecretIDs: []domains.K8SResourceID{},
+			expectedSecretIDs: []domains.SecretInfo{},
 			expectedRepoErr:   errRepo,
 		},
 		{
@@ -58,9 +58,21 @@ func TestListTLSSecrets(t *testing.T) {
 					TLSKey:    []byte("key-data"),
 				},
 			},
-			expectedSecretIDs: []domains.K8SResourceID{
-				{Name: "tls-secret-1", Namespace: "default"},
-				{Name: "tls-secret-2", Namespace: "default"},
+			expectedSecretIDs: []domains.SecretInfo{
+				{
+					Name:      "tls-secret-1",
+					Namespace: "default",
+					Type:      "kubernetes/tls",
+					TLSCert:   []byte("cert-data"),
+					TLSKey:    []byte("key-data"),
+				},
+				{
+					Name:      "tls-secret-2",
+					Namespace: "default",
+					Type:      "kubernetes/tls",
+					TLSCert:   []byte("cert-data"),
+					TLSKey:    []byte("key-data"),
+				},
 			},
 		},
 	}
@@ -79,7 +91,7 @@ func TestListTLSSecrets(t *testing.T) {
 			}
 
 			if secrets == nil {
-				secrets = []domains.K8SResourceID{}
+				secrets = []domains.SecretInfo{}
 			}
 
 			if !reflect.DeepEqual(secrets, tt.expectedSecretIDs) {
@@ -94,14 +106,14 @@ func TestListTLSSecret(t *testing.T) {
 		name             string
 		namespace        string
 		secret           domains.SecretInfo
-		expectedSecretID domains.K8SResourceID
+		expectedSecretID domains.SecretInfo
 		expectedRepoErr  error
 	}{
 		{
 			name:             "Should return error if can not fetch secret",
 			namespace:        "default",
 			secret:           domains.SecretInfo{},
-			expectedSecretID: domains.K8SResourceID{},
+			expectedSecretID: domains.SecretInfo{},
 			expectedRepoErr:  errRepo,
 		},
 		{
@@ -114,8 +126,14 @@ func TestListTLSSecret(t *testing.T) {
 				TLSCert:   []byte("cert-data"),
 				TLSKey:    []byte("key-data"),
 			},
-			expectedSecretID: domains.K8SResourceID{Name: "tls-secret-1", Namespace: "default"},
-			expectedRepoErr:  nil,
+			expectedSecretID: domains.SecretInfo{
+				Name:      "tls-secret-1",
+				Namespace: "default",
+				Type:      "kubernetes/tls",
+				TLSCert:   []byte("cert-data"),
+				TLSKey:    []byte("key-data"),
+			},
+			expectedRepoErr: nil,
 		},
 	}
 

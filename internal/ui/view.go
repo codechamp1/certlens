@@ -2,6 +2,8 @@ package ui
 
 import (
 	"fmt"
+	"io"
+	"time"
 
 	"github.com/atotto/clipboard"
 	"github.com/charmbracelet/bubbles/list"
@@ -10,6 +12,7 @@ import (
 	"github.com/charmbracelet/bubbles/viewport"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
+	"github.com/dustin/go-humanize"
 
 	"github.com/codechamp1/certlens/internal/service"
 )
@@ -44,9 +47,51 @@ type secretDelegate struct {
 	list.DefaultDelegate
 }
 
+var (
+	normalItemStyle = lipgloss.NewStyle().Padding(0, 1).Foreground(lipgloss.Color("7"))
+	//normalItemSelectedStyle       = lipgloss.NewStyle().Padding(0, 1).Foreground(lipgloss.Color("21"))
+	soonExpiringItemStyle = lipgloss.NewStyle().Padding(0, 1).Foreground(lipgloss.Color("3"))
+	//soonExpiringItemSelectedStyle = lipgloss.NewStyle().Padding(0, 1).Foreground(lipgloss.Color("227"))
+	expiredItemStyle = lipgloss.NewStyle().Padding(0, 1).Foreground(lipgloss.Color("1"))
+	//expiredItemSelectedStyle      = lipgloss.NewStyle().Padding(0, 1).Foreground(lipgloss.Color("196"))
+	grayStyle = lipgloss.NewStyle().Padding(0, 1).Foreground(lipgloss.Color("238"))
+)
+
+func (d secretDelegate) Height() int                             { return 2 }
+func (d secretDelegate) Spacing() int                            { return 1 }
+func (d secretDelegate) Update(_ tea.Msg, _ *list.Model) tea.Cmd { return nil }
+
+func (d secretDelegate) Render(w io.Writer, m list.Model, index int, listItem list.Item) {
+	i, ok := listItem.(secretItem)
+	if !ok {
+		return
+	}
+
+	style := normalItemStyle
+	expiryTimeStr := grayStyle.Render(fmt.Sprintf("(%s)", humanize.Time(i.expiryDate)))
+
+	str := fmt.Sprintf("  %s\n  namespace: %s", i.name, i.namespace)
+
+	if i.expiryDate.Before(time.Now()) {
+		style = expiredItemStyle
+	} else if time.Until(i.expiryDate) < 10*24*time.Hour {
+		style = soonExpiringItemStyle
+	}
+
+	fn := style.Render
+	if index == m.Index() {
+		fn = func(s ...string) string {
+			return style.Bold(true).Render(fmt.Sprintf("│ %s   %s\n│ namespace: %s", i.name, expiryTimeStr, i.namespace))
+		}
+	}
+
+	fmt.Fprint(w, fn(str))
+}
+
 type secretItem struct {
-	name      string
-	namespace string
+	name       string
+	namespace  string
+	expiryDate time.Time
 }
 
 func (s secretItem) Title() string       { return s.name }
@@ -241,7 +286,11 @@ func loadSecretsCmd(m Model) tea.Cmd {
 				if err != nil {
 					return errorMsg{fmt.Errorf("failed to load secret %s/%s: %w", m.namespace, m.name, err)}
 				}
-				return secretsLoadedMsg{[]list.Item{secretItem{secret.Name, secret.Namespace}}}
+				certs, err := service.ParseCertsFromString(string(secret.TLSCert))
+				if err != nil {
+					return errorMsg{fmt.Errorf("failed to load secret %s/%s: %w", m.namespace, m.name, err)}
+				}
+				return secretsLoadedMsg{[]list.Item{secretItem{secret.Name, secret.Namespace, certs[0].NotAfter}}}
 			}
 
 			secrets, err := m.secretsService.ListTLSSecrets(m.namespace)
@@ -251,7 +300,11 @@ func loadSecretsCmd(m Model) tea.Cmd {
 
 			items := make([]list.Item, len(secrets))
 			for i, s := range secrets {
-				items[i] = secretItem{s.Name, s.Namespace}
+				certs, err := service.ParseCertsFromString(string(s.TLSCert))
+				if err != nil {
+					return errorMsg{fmt.Errorf("failed to load secret %s/%s: %w", m.namespace, m.name, err)}
+				}
+				items[i] = secretItem{s.Name, s.Namespace, certs[0].NotAfter}
 			}
 			return secretsLoadedMsg{items}
 		},

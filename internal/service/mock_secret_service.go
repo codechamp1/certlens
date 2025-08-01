@@ -3,15 +3,15 @@ package service
 import "github.com/codechamp1/certlens/internal/domains"
 
 type mockSecretService struct {
-	mockListTLSSecrets      func(namespace string) ([]domains.K8SResourceID, error)
-	mockListTLSSecret       func(namespace, name string) (domains.K8SResourceID, error)
+	mockListTLSSecrets      func(namespace string) ([]domains.SecretInfo, error)
+	mockListTLSSecret       func(namespace, name string) (domains.SecretInfo, error)
 	mockInspectTLSSecret    func(namespace, name string) ([]CertificateInfo, error)
 	mockRawInspectTLSSecret func(namespace, name string) (string, string, error)
 }
 
 func NewMockSecretService(
-	mockListTLSSecrets func(namespace string) ([]domains.K8SResourceID, error),
-	mockListTLSSecret func(namespace, name string) (domains.K8SResourceID, error),
+	mockListTLSSecrets func(namespace string) ([]domains.SecretInfo, error),
+	mockListTLSSecret func(namespace, name string) (domains.SecretInfo, error),
 	mockInspectTLSSecret func(namespace, name string) ([]CertificateInfo, error),
 	mockRawInspectTLSSecret func(namespace, name string) (string, string, error)) SecretsService {
 	return mockSecretService{
@@ -26,11 +26,11 @@ func (m mockSecretService) InspectTLSSecret(namespace, name string) ([]Certifica
 	return m.mockInspectTLSSecret(namespace, name)
 }
 
-func (m mockSecretService) ListTLSSecrets(namespace string) ([]domains.K8SResourceID, error) {
+func (m mockSecretService) ListTLSSecrets(namespace string) ([]domains.SecretInfo, error) {
 	return m.mockListTLSSecrets(namespace)
 }
 
-func (m mockSecretService) ListTLSSecret(namespace, name string) (domains.K8SResourceID, error) {
+func (m mockSecretService) ListTLSSecret(namespace, name string) (domains.SecretInfo, error) {
 	return m.mockListTLSSecret(namespace, name)
 }
 
