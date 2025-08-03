@@ -1,4 +1,4 @@
-## Pull Request  Checklist
+## Pull Request Checklist
 
 - [ ] A clear and concise summary of the changes made
 - [ ] Motivation or context explaining why the change is needed
