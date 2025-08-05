@@ -169,12 +169,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 	case secretsLoadedMsg:
 		m.secretsList.SetItems(msg.secrets)
-		selectedSecret := m.secretsList.Items()[0].(secretItem)
-		m.selectedSecret = &selectedSecret
 		m.loading = false
-		return m, func() tea.Msg {
-			return inspectTLSSecretMsg{tag: m.debounceTag}
-		}
 	case switchCertViewMsg:
 		m.showRaw = !m.showRaw
 		cmds = append(cmds, func() tea.Msg { return inspectTLSSecretMsg{tag: m.debounceTag} })
@@ -223,10 +218,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			if m.selectedSecret == nil || item.name != m.selectedSecret.name || item.namespace != m.selectedSecret.namespace {
 				m.selectedSecret = &item
 				m.debounceTag++
-				cmds = append(cmds,
-					tea.Tick(debounceDuration, func(t time.Time) tea.Msg {
-						return inspectTLSSecretMsg{tag: m.debounceTag}
-					}))
+				cmds = append(cmds, tea.Tick(debounceDuration, func(t time.Time) tea.Msg { return inspectTLSSecretMsg{tag: m.debounceTag} }))
 			}
 		}
 	}
