@@ -55,7 +55,7 @@ func (s secretItem) FilterValue() string { return s.name }
 
 type Model struct {
 	//Services & configuration
-	secretsService service.SecretsService
+	secretsService service.Manager
 	namespace      string
 	name           string
 	theme          ThemeProvider
@@ -78,7 +78,7 @@ type Model struct {
 	uiLayout          uiLayout
 }
 
-func NewModel(svc service.SecretsService, namespace, name string) (Model, error) {
+func NewModel(svc service.Manager, namespace, name string) (Model, error) {
 	var items []list.Item
 	secretsList := list.New(items, newSecretDelegate(), 50, 20)
 	secretsList.Title = "Select a TLS Secret"
@@ -241,7 +241,7 @@ func loadSecretsCmd(m Model) tea.Cmd {
 				if err != nil {
 					return errorMsg{fmt.Errorf("failed to load secret %s/%s: %w", m.namespace, m.name, err)}
 				}
-				return secretsLoadedMsg{[]list.Item{secretItem{secret.Name, secret.Namespace}}}
+				return secretsLoadedMsg{[]list.Item{secretItem{secret.Name(), secret.Namespace()}}}
 			}
 
 			secrets, err := m.secretsService.ListTLSSecrets(m.namespace)
@@ -251,7 +251,7 @@ func loadSecretsCmd(m Model) tea.Cmd {
 
 			items := make([]list.Item, len(secrets))
 			for i, s := range secrets {
-				items[i] = secretItem{s.Name, s.Namespace}
+				items[i] = secretItem{s.Name(), s.Namespace()}
 			}
 			return secretsLoadedMsg{items}
 		},

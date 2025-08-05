@@ -9,7 +9,8 @@ import (
 
 	"github.com/codechamp1/certlens/configs"
 	"github.com/codechamp1/certlens/internal/client"
-	"github.com/codechamp1/certlens/internal/repository"
+	"github.com/codechamp1/certlens/internal/domains/cert"
+	"github.com/codechamp1/certlens/internal/domains/secret"
 	"github.com/codechamp1/certlens/internal/service"
 	"github.com/codechamp1/certlens/internal/ui"
 )
@@ -23,9 +24,11 @@ func main() {
 		log.Fatalf("Failed to create Kubernetes client: %v", err)
 	}
 
-	repo := repository.NewSecretsRepository(kubeClient)
+	repo := secret.NewDefaultRepository(kubeClient)
 
-	svc := service.NewSecretsService(repo)
+	certService := cert.NewDefaultService()
+
+	svc := service.NewDefaultManager(repo, certService)
 
 	model, err := ui.NewModel(svc, config.Namespace, config.Name)
 

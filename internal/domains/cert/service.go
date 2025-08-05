@@ -1,4 +1,4 @@
-package service
+package cert
 
 import (
 	"crypto/x509"
@@ -10,62 +10,30 @@ import (
 	"time"
 )
 
-type CertificateInfo struct {
-	CertificateRawInfo      `label:"Certificate Raw Info"`
-	CertificateComputedInfo `label:"Certificate Computed Info"`
+type Service interface {
+	ParseTLSCert(tlsCert []byte) ([]TLS, error)
 }
 
-type CertificateRawInfo struct {
-	// Raw Info
-	Subject            string `label:"Subject"`
-	Issuer             string `label:"Issuer"`
-	SerialNumber       string `label:"Serial Number"`
-	NotBefore          string `label:"Valid From"`
-	NotAfter           string `label:"Valid To"`
-	Signature          string `label:"Signature"`
-	SignatureAlgorithm string `label:"Signature Algorithm"`
-	PublicKeyAlgorithm string `label:"Public Key Algorithm"`
-	IsCA               bool   `label:"Is CA"`
+type defaultService struct{}
 
-	// Subject Alternative Names
-	DNSNames       []string `label:"DNS Names"`
-	EmailAddresses []string `label:"Email Addresses"`
-	IPAddresses    []string `label:"IP Addresses"`
-	URIs           []string `label:"URIs"`
-
-	// Key IDs
-	SubjectKeyID   string `label:"Subject Key ID"`
-	AuthorityKeyID string `label:"Authority Key ID"`
-
-	// CRL / OCSP
-	CRLDistributionPoints []string `label:"CRL Distribution Points"`
-	OCSPServers           []string `label:"OCSP Servers"`
-
-	// Usage
-	KeyUsage     string   `label:"Key Usage"`
-	ExtKeyUsages []string `label:"Extended Key Usage"`
-
-	// Certificate Version
-	Version int `label:"X.509 Version"`
+func NewDefaultService() Service {
+	return defaultService{}
 }
 
-type CertificateComputedInfo struct {
-	Expired             bool          `label:"Expired"`
-	TimeUntilExpiry     time.Duration `label:"Time Until Expiry"`
-	TotalValidity       time.Duration `label:"Total Validity Duration"`
-	TimeSinceIssued     time.Duration `label:"Time Since Issued"`
-	ValidityUsedPercent float64       `label:"Validity Used (%)"`
-	RemainingPercent    float64       `label:"Time Remaining (%)"`
-	ExpiryStatus        string        `label:"Expiry Status"`
-	IsSelfSigned        bool          `label:"Self-Signed"`
-	IsCurrentlyValid    bool          `label:"Currently Valid"`
+func (cs defaultService) ParseTLSCert(tlsCert []byte) ([]TLS, error) {
+	x509Certs, err := parseCertsFromString(string(tlsCert))
+	if err != nil {
+		return []TLS{}, fmt.Errorf("service can not parse tls cert, err: %w", err)
+	}
+
+	return parseCertificateChain(x509Certs), nil
 }
 
 var keyUsageNames = map[x509.KeyUsage]string{
 	x509.KeyUsageDigitalSignature:  "Digital Signature",
 	x509.KeyUsageContentCommitment: "Content Commitment",
 	x509.KeyUsageKeyEncipherment:   "Key Encipherment",
-	x509.KeyUsageDataEncipherment:  "Data Encipherment",
+	x509.KeyUsageDataEncipherment:  "TLS Encipherment",
 	x509.KeyUsageKeyAgreement:      "Key Agreement",
 	x509.KeyUsageCertSign:          "Cert Sign",
 	x509.KeyUsageCRLSign:           "CRL Sign",
@@ -106,50 +74,10 @@ func (s Status) String() string {
 	return "Unknown"
 }
 
-func parseCertsFromString(pemStr string) ([]*x509.Certificate, error) {
-	var certs []*x509.Certificate
-	data := []byte(pemStr)
-
-	for {
-		block, rest := pem.Decode(data)
-		if block == nil {
-			break // no more blocks
-		}
-
-		if block.Type != "CERTIFICATE" {
-			data = rest
-			continue // skip non-cert blocks
-		}
-
-		cert, err := x509.ParseCertificate(block.Bytes)
-		if err != nil {
-			return nil, fmt.Errorf("failed to parse x509 certificate: %w", err)
-		}
-
-		certs = append(certs, cert)
-		data = rest
-	}
-
-	if len(certs) == 0 {
-		return nil, fmt.Errorf("no certificates found in input")
-	}
-
-	return certs, nil
-}
-
-func parseCertificates(certs []*x509.Certificate) []CertificateInfo {
-	var certInfos []CertificateInfo
-	for _, cert := range certs {
-		certInfo := parseCertificate(*cert)
-		certInfos = append(certInfos, certInfo)
-	}
-	return certInfos
-}
-
-func parseCertificate(cert x509.Certificate) CertificateInfo {
-	percent, status := expiryStatusByPercentage(cert, 25.0, 10.0) // warning at 25%, critical at 10%
-	return CertificateInfo{
-		CertificateRawInfo: CertificateRawInfo{
+func fromX509(cert x509.Certificate) TLS {
+	percent, status := expiryStatusByPercentage(cert, 25, 10)
+	return TLS{
+		TLSRawData: TLSRawData{
 			Subject:               cert.Subject.String(),
 			Issuer:                cert.Issuer.String(),
 			SerialNumber:          cert.SerialNumber.String(),
@@ -171,7 +99,7 @@ func parseCertificate(cert x509.Certificate) CertificateInfo {
 			ExtKeyUsages:          extractExtendedKeyUsages(cert),
 			Version:               cert.Version,
 		},
-		CertificateComputedInfo: CertificateComputedInfo{
+		TLSComputedData: TLSComputedData{
 			Expired:             time.Now().After(cert.NotAfter),
 			TimeUntilExpiry:     time.Until(cert.NotAfter),
 			TotalValidity:       cert.NotAfter.Sub(cert.NotBefore),
@@ -183,6 +111,46 @@ func parseCertificate(cert x509.Certificate) CertificateInfo {
 			IsCurrentlyValid:    !time.Now().After(cert.NotAfter) && time.Now().After(cert.NotBefore),
 		},
 	}
+
+}
+
+func parseCertsFromString(pemStr string) ([]*x509.Certificate, error) {
+	var certs []*x509.Certificate
+	data := []byte(pemStr)
+
+	for {
+		block, rest := pem.Decode(data)
+		if block == nil {
+			break // no more blocks
+		}
+
+		if block.Type != "CERTIFICATE" {
+			data = rest
+			continue // skip non-cert blocks
+		}
+
+		cert, err := x509.ParseCertificate(block.Bytes)
+		if err != nil {
+			return nil, fmt.Errorf("failed to parse x509 cert: %w", err)
+		}
+
+		certs = append(certs, cert)
+		data = rest
+	}
+
+	if len(certs) == 0 {
+		return nil, fmt.Errorf("no certificates found in input")
+	}
+
+	return certs, nil
+}
+
+func parseCertificateChain(certs []*x509.Certificate) []TLS {
+	var certData []TLS
+	for _, cert := range certs {
+		certData = append(certData, fromX509(*cert))
+	}
+	return certData
 }
 
 func extractExtendedKeyUsages(cert x509.Certificate) []string {

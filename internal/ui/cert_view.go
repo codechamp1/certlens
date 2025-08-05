@@ -8,7 +8,7 @@ import (
 
 	"github.com/charmbracelet/lipgloss"
 
-	"github.com/codechamp1/certlens/internal/service"
+	"github.com/codechamp1/certlens/internal/domains/cert"
 )
 
 type CertField struct {
@@ -63,7 +63,7 @@ func renderField(keyStyle lipgloss.Style, valueStyle lipgloss.Style, key, value 
 	)
 }
 
-func formatCertificateInfo(ci service.CertificateInfo, t ThemeProvider) string {
+func formatCertificateInfo(ci cert.TLS, t ThemeProvider) string {
 	var sb strings.Builder
 	val := reflect.ValueOf(ci)
 	typ := reflect.TypeOf(ci)
