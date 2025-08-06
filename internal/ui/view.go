@@ -182,15 +182,9 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.loading = true
 		cmds = append(cmds, m.spinner.Tick)
 	case inspectTLSSecretMsg:
-		if msg.tag != m.debounceTag {
-			return m, nil
+		if msg.tag == m.debounceTag {
+			m.handleInspectTLSSecretMsg()
 		}
-		data, err := m.inspectedTLSSecretContent(m.selectedSecret.namespace, m.selectedSecret.name, m.showRaw)
-		m.certViewPages = data
-		m.inspectedError = err
-		m.certPaginator.SetTotalPages(len(data))
-		m.certPaginator.Page = 0
-		m.inspectedViewport.SetContent(m.certViewPages[m.certPaginator.Page] + "\n\n" + m.certPaginator.View())
 	case errorMsg:
 		m.loading = false
 		m.errorModalMsg = fmt.Sprintf("Error: %v", msg.err)
@@ -224,6 +218,15 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	}
 
 	return m, tea.Batch(cmds...)
+}
+
+func (m Model) handleInspectTLSSecretMsg() {
+	data, err := m.inspectedTLSSecretContent(m.selectedSecret.namespace, m.selectedSecret.name, m.showRaw)
+	m.certViewPages = data
+	m.inspectedError = err
+	m.certPaginator.SetTotalPages(len(data))
+	m.certPaginator.Page = 0
+	m.inspectedViewport.SetContent(m.certViewPages[m.certPaginator.Page] + "\n\n" + m.certPaginator.View())
 }
 
 func (m Model) View() string {
