@@ -2,6 +2,7 @@ package ui
 
 import (
 	"fmt"
+	"time"
 
 	"github.com/atotto/clipboard"
 	"github.com/charmbracelet/bubbles/list"
@@ -25,7 +26,10 @@ type secretsLoadedMsg struct {
 	secrets []list.Item
 }
 
-type inspectTLSSecretMsg struct{}
+type inspectTLSSecretMsg struct {
+	tag int
+}
+
 type loadingStartedMsg struct{}
 
 type loadSecretsMsg struct{}
@@ -53,12 +57,16 @@ func (s secretItem) Title() string       { return s.name }
 func (s secretItem) Description() string { return "Namespace: " + s.namespace }
 func (s secretItem) FilterValue() string { return s.name }
 
+const debounceDuration = 100 * time.Millisecond
+
 type Model struct {
 	//Services & configuration
 	secretsService service.SecretsService
 	namespace      string
 	name           string
 	theme          ThemeProvider
+
+	debounceTag int
 
 	// TLS Secret Data
 	selectedSecret *secretItem
@@ -164,7 +172,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.loading = false
 	case switchCertViewMsg:
 		m.showRaw = !m.showRaw
-		cmds = append(cmds, func() tea.Msg { return inspectTLSSecretMsg{} })
+		cmds = append(cmds, func() tea.Msg { return inspectTLSSecretMsg{tag: m.debounceTag} })
 	case switchPaneMsg:
 		m.selectedPane = nextPane(m.selectedPane)
 		m.helpView.SetPane(m.selectedPane)
@@ -174,12 +182,9 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.loading = true
 		cmds = append(cmds, m.spinner.Tick)
 	case inspectTLSSecretMsg:
-		data, err := m.inspectedTLSSecretContent(m.selectedSecret.namespace, m.selectedSecret.name, m.showRaw)
-		m.certViewPages = data
-		m.inspectedError = err
-		m.certPaginator.SetTotalPages(len(data))
-		m.certPaginator.Page = 0
-		m.inspectedViewport.SetContent(m.certViewPages[m.certPaginator.Page] + "\n\n" + m.certPaginator.View())
+		if msg.tag == m.debounceTag {
+			m.handleInspectTLSSecretMsg()
+		}
 	case errorMsg:
 		m.loading = false
 		m.errorModalMsg = fmt.Sprintf("Error: %v", msg.err)
@@ -206,12 +211,22 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if item, ok := sel.(secretItem); ok {
 			if m.selectedSecret == nil || item.name != m.selectedSecret.name || item.namespace != m.selectedSecret.namespace {
 				m.selectedSecret = &item
-				cmds = append(cmds, func() tea.Msg { return inspectTLSSecretMsg{} })
+				m.debounceTag++
+				cmds = append(cmds, tea.Tick(debounceDuration, func(t time.Time) tea.Msg { return inspectTLSSecretMsg{tag: m.debounceTag} }))
 			}
 		}
 	}
 
 	return m, tea.Batch(cmds...)
+}
+
+func (m Model) handleInspectTLSSecretMsg() {
+	data, err := m.inspectedTLSSecretContent(m.selectedSecret.namespace, m.selectedSecret.name, m.showRaw)
+	m.certViewPages = data
+	m.inspectedError = err
+	m.certPaginator.SetTotalPages(len(data))
+	m.certPaginator.Page = 0
+	m.inspectedViewport.SetContent(m.certViewPages[m.certPaginator.Page] + "\n\n" + m.certPaginator.View())
 }
 
 func (m Model) View() string {
