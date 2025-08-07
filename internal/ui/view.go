@@ -220,7 +220,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	return m, tea.Batch(cmds...)
 }
 
-func (m Model) handleInspectTLSSecretMsg() {
+func (m *Model) handleInspectTLSSecretMsg() {
 	data, err := m.inspectedTLSSecretContent(m.selectedSecret.namespace, m.selectedSecret.name, m.showRaw)
 	m.certViewPages = data
 	m.inspectedError = err
