@@ -153,18 +153,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case tea.WindowSizeMsg:
 		m.updateLayout(msg.Width, msg.Height)
 	case copyMsg:
-		var copyData string
-		tlsCert, tlsKey := m.selectedSecret.PemCert(), m.selectedSecret.PemKey()
-
-		if msg.key {
-			copyData = tlsKey
-		} else {
-			copyData = tlsCert
-		}
-
-		if err := clipboard.WriteAll(copyData); err != nil {
-			m.errorModalMsg = fmt.Sprintf("Error copying secret: %v", err)
-		}
+		m.handleCopyMsg(msg)
 	case secretsLoadedMsg:
 		m.secretsList.SetItems(msg.secrets)
 		m.loading = false
@@ -218,15 +207,6 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	return m, tea.Batch(cmds...)
 }
 
-func (m Model) handleInspectTLSSecretMsg() {
-	data, err := m.inspectedTLSSecretContent()
-	m.certViewPages = data
-	m.inspectedError = err
-	m.certPaginator.SetTotalPages(len(data))
-	m.certPaginator.Page = 0
-	m.inspectedViewport.SetContent(m.certViewPages[m.certPaginator.Page] + "\n\n" + m.certPaginator.View())
-}
-
 func (m Model) View() string {
 	if m.errorModalMsg != "" {
 		return m.renderErrorModal(m.errorModalMsg)
@@ -271,16 +251,6 @@ func loadSecretsCmd(m Model) tea.Cmd {
 	)
 }
 
-func newSecretDelegate() secretDelegate {
-	delegate := list.NewDefaultDelegate()
-
-	// TODO: use the theme styles
-	delegate.Styles.NormalTitle = delegate.Styles.NormalTitle.Foreground(lipgloss.Color("#00BFFF"))
-	delegate.Styles.NormalDesc = delegate.Styles.NormalDesc.Foreground(lipgloss.Color("#5DADE2"))
-
-	return secretDelegate{delegate}
-}
-
 func (m Model) leftPane(width, height int) string {
 	style := m.theme.Pane(m.selectedPane == LeftPane, width, height)
 	if m.loading {
@@ -303,13 +273,6 @@ func (m Model) rightPane(width, height int) string {
 func (m Model) renderErrorModal(msg string) string {
 	errorModalRender := m.theme.ErrorModalWithWidth(m.uiLayout.TotalWidth).Render("Error:\n" + msg + "\n\nPress any key to dismiss.")
 	return lipgloss.Place(m.uiLayout.TotalWidth, m.uiLayout.TotalHeight, lipgloss.Center, lipgloss.Center, errorModalRender)
-}
-
-func nextPane(currentPane Pane) Pane {
-	if currentPane == LeftPane {
-		return RightPane
-	}
-	return LeftPane
 }
 
 func (m Model) inspectedTLSSecretContent() ([]string, error) {
@@ -335,4 +298,52 @@ func (m *Model) updateLayout(width, height int) {
 	m.inspectedViewport.Width = m.uiLayout.RightPaneWidth
 	m.inspectedViewport.Height = m.uiLayout.UsableHeight
 	m.helpView.SetWidth(m.uiLayout.TotalWidth)
+}
+
+func (m *Model) handleInspectTLSSecretMsg() {
+	if m.selectedSecret == nil {
+		return
+	}
+	data, err := m.inspectedTLSSecretContent()
+	m.certViewPages = data
+	m.inspectedError = err
+	m.certPaginator.SetTotalPages(len(data))
+	m.certPaginator.Page = 0
+	m.inspectedViewport.SetContent(m.certViewPages[m.certPaginator.Page] + "\n\n" + m.certPaginator.View())
+}
+
+func (m *Model) handleCopyMsg(msg copyMsg) {
+	if m.selectedSecret == nil {
+		return
+	}
+
+	var copyData string
+	tlsCert, tlsKey := m.selectedSecret.PemCert(), m.selectedSecret.PemKey()
+
+	if msg.key {
+		copyData = tlsKey
+	} else {
+		copyData = tlsCert
+	}
+
+	if err := clipboard.WriteAll(copyData); err != nil {
+		m.errorModalMsg = fmt.Sprintf("Error copying secret: %v", err)
+	}
+}
+
+func newSecretDelegate() secretDelegate {
+	delegate := list.NewDefaultDelegate()
+
+	// TODO: use the theme styles
+	delegate.Styles.NormalTitle = delegate.Styles.NormalTitle.Foreground(lipgloss.Color("#00BFFF"))
+	delegate.Styles.NormalDesc = delegate.Styles.NormalDesc.Foreground(lipgloss.Color("#5DADE2"))
+
+	return secretDelegate{delegate}
+}
+
+func nextPane(currentPane Pane) Pane {
+	if currentPane == LeftPane {
+		return RightPane
+	}
+	return LeftPane
 }
