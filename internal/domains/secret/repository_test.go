@@ -1,4 +1,4 @@
-package repository_test
+package secret_test
 
 import (
 	"errors"
@@ -9,22 +9,21 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/codechamp1/certlens/internal/client"
-	"github.com/codechamp1/certlens/internal/domains"
-	"github.com/codechamp1/certlens/internal/repository"
+	"github.com/codechamp1/certlens/internal/domains/secret"
 )
 
 var errTest = errors.New("simulated error")
 
 func TestNewSecretsRepository(t *testing.T) {
-	t.Run("Should create a repository with the given client", func(t *testing.T) {
+	t.Run("Should create a domainservice with the given client", func(t *testing.T) {
 		mockClient := client.NewMockSecretsFetcher(nil, nil)
-		repo := repository.NewSecretsRepository(mockClient)
+		repo := secret.NewDefaultRepository(mockClient)
 		if repo == nil {
-			t.Error("Expected repository to be created, but got nil")
+			t.Error("Expected domainservice to be created, but got nil")
 		}
 		//nolint
-		if _, ok := repo.(repository.SecretsRepository); !ok {
-			t.Error("Expected repository to implement SecretsRepository interface, but it does not")
+		if _, ok := repo.(secret.Repository); !ok {
+			t.Error("Expected domainservice to implement Repository interface, but it does not")
 		}
 	})
 }
@@ -34,14 +33,14 @@ func TestGetTLSSecrets(t *testing.T) {
 		name            string
 		namespace       string
 		secrets         v1.SecretList
-		expectedSecrets []domains.SecretInfo
+		expectedSecrets []secret.TLS
 		expectedErr     error
 	}{
 		{
 			name:            "Should return error if can not fetch the secret from the client",
 			namespace:       "",
 			secrets:         v1.SecretList{},
-			expectedSecrets: []domains.SecretInfo{},
+			expectedSecrets: []secret.TLS{},
 			expectedErr:     errTest,
 		},
 		{
@@ -68,14 +67,14 @@ func TestGetTLSSecrets(t *testing.T) {
 					},
 				},
 			},
-			expectedSecrets: []domains.SecretInfo{
-				{
-					Name:      "tls-secret-1",
-					Namespace: "default",
-					Type:      "kubernetes.io/tls",
-					TLSCert:   []byte("cert-data"),
-					TLSKey:    []byte("key-data"),
-				},
+			expectedSecrets: []secret.TLS{
+				secret.NewTLS(
+					"tls-secret-1",
+					"default",
+					"kubernetes.io/tls",
+					[]byte("cert-data"),
+					[]byte("key-data"),
+				),
 			},
 			expectedErr: nil,
 		},
@@ -92,7 +91,7 @@ func TestGetTLSSecrets(t *testing.T) {
 					},
 				},
 			},
-			expectedSecrets: []domains.SecretInfo{},
+			expectedSecrets: []secret.TLS{},
 			expectedErr:     nil,
 		},
 	}
@@ -106,7 +105,7 @@ func TestGetTLSSecrets(t *testing.T) {
 				nil,
 			)
 
-			repo := repository.NewSecretsRepository(mockClient)
+			repo := secret.NewDefaultRepository(mockClient)
 
 			secrets, err := repo.GetTLSSecrets(tt.namespace)
 			if !errors.Is(err, tt.expectedErr) {
@@ -115,7 +114,7 @@ func TestGetTLSSecrets(t *testing.T) {
 
 			// normalize secrets for comparison
 			if secrets == nil {
-				secrets = []domains.SecretInfo{}
+				secrets = []secret.TLS{}
 			}
 
 			if !reflect.DeepEqual(secrets, tt.expectedSecrets) {
@@ -130,14 +129,14 @@ func TestGetTLSSecret(t *testing.T) {
 		name        string
 		namespace   string
 		secret      v1.Secret
-		expected    domains.SecretInfo
+		expected    secret.TLS
 		expectedErr error
 	}{
 		{
 			name:        "Should return error if can not fetch the secret from the client",
 			namespace:   "default",
 			secret:      v1.Secret{},
-			expected:    domains.SecretInfo{},
+			expected:    secret.TLS{},
 			expectedErr: errTest,
 		},
 		{
@@ -154,13 +153,13 @@ func TestGetTLSSecret(t *testing.T) {
 					v1.TLSPrivateKeyKey: []byte("key-data"),
 				},
 			},
-			expected: domains.SecretInfo{
-				Name:      "tls-secret-1",
-				Namespace: "default",
-				Type:      "kubernetes.io/tls",
-				TLSCert:   []byte("cert-data"),
-				TLSKey:    []byte("key-data"),
-			},
+			expected: secret.NewTLS(
+				"tls-secret-1",
+				"default",
+				"kubernetes.io/tls",
+				[]byte("cert-data"),
+				[]byte("key-data"),
+			),
 		},
 		{
 			name:      "Should return error if the secret is not of type TLS",
@@ -171,7 +170,7 @@ func TestGetTLSSecret(t *testing.T) {
 					Namespace: "default",
 				},
 			},
-			expected:    domains.SecretInfo{},
+			expected:    secret.TLS{},
 			expectedErr: errTest,
 		},
 	}
@@ -185,16 +184,16 @@ func TestGetTLSSecret(t *testing.T) {
 				},
 			)
 
-			repo := repository.NewSecretsRepository(mockClient)
+			repo := secret.NewDefaultRepository(mockClient)
 
-			secret, err := repo.GetTLSSecret(tt.namespace, tt.secret.Name)
+			tlsSecret, err := repo.GetTLSSecret(tt.namespace, tt.secret.Name)
 
 			if !errors.Is(err, tt.expectedErr) {
 				t.Errorf("Expected error %v, got %v", tt.expectedErr, err)
 			}
 
-			if !reflect.DeepEqual(secret, tt.expected) {
-				t.Errorf("Expected secret %+v, got %+v", tt.expected, secret)
+			if !reflect.DeepEqual(tlsSecret, tt.expected) {
+				t.Errorf("Expected secret %+v, got %+v", tt.expected, tlsSecret)
 			}
 		})
 	}
