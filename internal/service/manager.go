@@ -11,7 +11,6 @@ type Manager interface {
 	InspectTLSSecret(tlsSecret secret.TLS) ([]cert.TLS, error)
 	ListTLSSecrets(namespace string) ([]secret.TLS, error)
 	ListTLSSecret(namespace, name string) (secret.TLS, error)
-	RawInspectTLSSecret(namespace, name string) (string, string, error)
 }
 
 type defaultManager struct {
@@ -53,13 +52,4 @@ func (s defaultManager) ListTLSSecret(namespace, name string) (secret.TLS, error
 	}
 
 	return tlsSecret, nil
-}
-
-func (s defaultManager) RawInspectTLSSecret(namespace, name string) (cert string, key string, err error) {
-	tlsSecret, err := s.GetTLSSecret(namespace, name)
-	if err != nil {
-		return "", "", fmt.Errorf("can not inspect TLS secret: %w", err)
-	}
-
-	return tlsSecret.PemCert(), tlsSecret.PemKey(), nil
 }

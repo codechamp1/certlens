@@ -6,22 +6,19 @@ import (
 )
 
 type mockSecretService struct {
-	mockListTLSSecrets      func(namespace string) ([]secret.TLS, error)
-	mockListTLSSecret       func(namespace, name string) (secret.TLS, error)
-	mockInspectTLSSecret    func(tlsSecret secret.TLS) ([]cert.TLS, error)
-	mockRawInspectTLSSecret func(namespace, name string) (string, string, error)
+	mockListTLSSecrets   func(namespace string) ([]secret.TLS, error)
+	mockListTLSSecret    func(namespace, name string) (secret.TLS, error)
+	mockInspectTLSSecret func(tlsSecret secret.TLS) ([]cert.TLS, error)
 }
 
 func NewMockSecretService(
 	mockListTLSSecrets func(namespace string) ([]secret.TLS, error),
 	mockListTLSSecret func(namespace, name string) (secret.TLS, error),
-	mockInspectTLSSecret func(tlsSecret secret.TLS) ([]cert.TLS, error),
-	mockRawInspectTLSSecret func(namespace, name string) (string, string, error)) Manager {
+	mockInspectTLSSecret func(tlsSecret secret.TLS) ([]cert.TLS, error)) Manager {
 	return mockSecretService{
-		mockInspectTLSSecret:    mockInspectTLSSecret,
-		mockListTLSSecret:       mockListTLSSecret,
-		mockListTLSSecrets:      mockListTLSSecrets,
-		mockRawInspectTLSSecret: mockRawInspectTLSSecret,
+		mockInspectTLSSecret: mockInspectTLSSecret,
+		mockListTLSSecret:    mockListTLSSecret,
+		mockListTLSSecrets:   mockListTLSSecrets,
 	}
 }
 
@@ -35,8 +32,4 @@ func (m mockSecretService) ListTLSSecrets(namespace string) ([]secret.TLS, error
 
 func (m mockSecretService) ListTLSSecret(namespace, name string) (secret.TLS, error) {
 	return m.mockListTLSSecret(namespace, name)
-}
-
-func (m mockSecretService) RawInspectTLSSecret(namespace, name string) (string, string, error) {
-	return m.mockRawInspectTLSSecret(namespace, name)
 }
