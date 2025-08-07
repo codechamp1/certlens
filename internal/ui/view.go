@@ -11,6 +11,7 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 
+	"github.com/codechamp1/certlens/internal/domains/secret"
 	"github.com/codechamp1/certlens/internal/service"
 )
 
@@ -45,13 +46,12 @@ type secretDelegate struct {
 }
 
 type secretItem struct {
-	name      string
-	namespace string
+	secret.TLS
 }
 
-func (s secretItem) Title() string       { return s.name }
-func (s secretItem) Description() string { return "Namespace: " + s.namespace }
-func (s secretItem) FilterValue() string { return s.name }
+func (s secretItem) Title() string       { return s.Name() }
+func (s secretItem) Description() string { return "Namespace: " + s.Namespace() }
+func (s secretItem) FilterValue() string { return s.Name() }
 
 type Model struct {
 	//Services & configuration
@@ -146,16 +146,14 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.updateLayout(msg.Width, msg.Height)
 	case copyMsg:
 		var copyData string
-		tlsCert, tlsKey, err := m.secretsService.RawInspectTLSSecret(m.selectedSecret.namespace, m.selectedSecret.name)
-		if err != nil {
-			m.errorModalMsg = fmt.Sprintf("Error copying secret: %v", err)
-		}
-		switch {
-		case msg.key:
+		tlsCert, tlsKey := m.selectedSecret.PemCert(), m.selectedSecret.PemKey()
+
+		if msg.key {
 			copyData = tlsKey
-		default:
+		} else {
 			copyData = tlsCert
 		}
+
 		if err := clipboard.WriteAll(copyData); err != nil {
 			m.errorModalMsg = fmt.Sprintf("Error copying secret: %v", err)
 		}
@@ -174,7 +172,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.loading = true
 		cmds = append(cmds, m.spinner.Tick)
 	case inspectTLSSecretMsg:
-		data, err := m.inspectedTLSSecretContent(m.selectedSecret.namespace, m.selectedSecret.name, m.showRaw)
+		data, err := m.inspectedTLSSecretContent()
 		m.certViewPages = data
 		m.inspectedError = err
 		m.certPaginator.SetTotalPages(len(data))
@@ -204,7 +202,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	if sel := m.secretsList.SelectedItem(); sel != nil {
 		if item, ok := sel.(secretItem); ok {
-			if m.selectedSecret == nil || item.name != m.selectedSecret.name || item.namespace != m.selectedSecret.namespace {
+			if m.selectedSecret == nil || !m.selectedSecret.Equals(item.TLS) {
 				m.selectedSecret = &item
 				cmds = append(cmds, func() tea.Msg { return inspectTLSSecretMsg{} })
 			}
@@ -237,21 +235,21 @@ func loadSecretsCmd(m Model) tea.Cmd {
 			}
 
 			if m.name != "" {
-				secret, err := m.secretsService.ListTLSSecret(m.namespace, m.name)
+				tlsSecret, err := m.secretsService.ListTLSSecret(m.namespace, m.name)
 				if err != nil {
 					return errorMsg{fmt.Errorf("failed to load secret %s/%s: %w", m.namespace, m.name, err)}
 				}
-				return secretsLoadedMsg{[]list.Item{secretItem{secret.Name(), secret.Namespace()}}}
+				return secretsLoadedMsg{[]list.Item{secretItem{tlsSecret}}}
 			}
 
-			secrets, err := m.secretsService.ListTLSSecrets(m.namespace)
+			tlsSecrets, err := m.secretsService.ListTLSSecrets(m.namespace)
 			if err != nil {
 				return errorMsg{fmt.Errorf("failed to load secretsList in namespace %s: %w", m.namespace, err)}
 			}
 
-			items := make([]list.Item, len(secrets))
-			for i, s := range secrets {
-				items[i] = secretItem{s.Name(), s.Namespace()}
+			items := make([]list.Item, len(tlsSecrets))
+			for i, s := range tlsSecrets {
+				items[i] = secretItem{s}
 			}
 			return secretsLoadedMsg{items}
 		},
@@ -299,18 +297,14 @@ func nextPane(currentPane Pane) Pane {
 	return LeftPane
 }
 
-func (m Model) inspectedTLSSecretContent(namespace, name string, raw bool) ([]string, error) {
-	if raw {
-		tlsCert, tlsKey, err := m.secretsService.RawInspectTLSSecret(namespace, name)
-		if err != nil {
-			return nil, fmt.Errorf("failed to inspect secret %s/%s: %w", namespace, name, err)
-		}
-		return []string{tlsCert, tlsKey}, nil
+func (m Model) inspectedTLSSecretContent() ([]string, error) {
+	if m.showRaw {
+		return []string{m.selectedSecret.PemCert(), m.selectedSecret.PemKey()}, nil
 	}
 
-	certs, err := m.secretsService.InspectTLSSecret(namespace, name)
+	certs, err := m.secretsService.InspectTLSSecret(m.selectedSecret.TLS)
 	if err != nil {
-		return nil, fmt.Errorf("failed to inspect secret %s/%s: %w", namespace, name, err)
+		return nil, fmt.Errorf("failed to inspect secret %s/%s: %w", m.selectedSecret.Namespace(), m.selectedSecret.Name(), err)
 	}
 
 	var views []string

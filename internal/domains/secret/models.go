@@ -19,26 +19,30 @@ func NewTLS(name string, namespace string, secretType string, tlsCert []byte, tl
 
 }
 
-func (s TLS) Name() string {
-	return s.name
+func (t TLS) Name() string {
+	return t.name
 }
 
-func (s TLS) Namespace() string {
-	return s.namespace
+func (t TLS) Namespace() string {
+	return t.namespace
 }
 
-func (s TLS) PemCert() string {
-	return string(s.tlsCert)
+func (t TLS) PemCert() string {
+	return string(t.tlsCert)
 }
 
-func (s TLS) PemKey() string {
-	return string(s.tlsKey)
+func (t TLS) PemKey() string {
+	return string(t.tlsKey)
 }
 
-func (s TLS) Cert() []byte {
-	return s.tlsCert
+func (t TLS) Cert() []byte {
+	return t.tlsCert
 }
 
-func (s TLS) Key() []byte {
-	return s.tlsKey
+func (t TLS) Key() []byte {
+	return t.tlsKey
+}
+
+func (t TLS) Equals(t2 TLS) bool {
+	return t.Name() == t2.Name() && t.Namespace() == t2.Namespace()
 }

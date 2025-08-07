@@ -8,7 +8,7 @@ import (
 )
 
 type Manager interface {
-	InspectTLSSecret(namespace, name string) ([]cert.TLS, error)
+	InspectTLSSecret(tlsSecret secret.TLS) ([]cert.TLS, error)
 	ListTLSSecrets(namespace string) ([]secret.TLS, error)
 	ListTLSSecret(namespace, name string) (secret.TLS, error)
 	RawInspectTLSSecret(namespace, name string) (string, string, error)
@@ -26,12 +26,7 @@ func NewDefaultManager(sr secret.Repository, cs cert.Service) Manager {
 	}
 }
 
-func (s defaultManager) InspectTLSSecret(namespace, name string) ([]cert.TLS, error) {
-	tlsSecret, err := s.GetTLSSecret(namespace, name)
-	if err != nil {
-		return nil, fmt.Errorf("app service can not get TLS secret: %w", err)
-	}
-
+func (s defaultManager) InspectTLSSecret(tlsSecret secret.TLS) ([]cert.TLS, error) {
 	certData, err := s.ParseTLSCert(tlsSecret.Cert())
 
 	if err != nil {
