@@ -38,7 +38,7 @@ func newClient(kubeconfig, context string) (*Client, error) {
 	}, nil
 }
 
-func NewSecretsFetcher(kubeconfig, context string) (SecretsFetcher, error) {
+func NewDefaultSecretsFetcher(kubeconfig, context string) (SecretsFetcher, error) {
 	client, err := newClient(kubeconfig, context)
 
 	if err != nil {

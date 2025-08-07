@@ -18,7 +18,7 @@ import (
 func main() {
 	config := configs.Load()
 
-	kubeClient, err := client.NewSecretsFetcher(config.KubeConfigPath, config.Context)
+	kubeClient, err := client.NewDefaultSecretsFetcher(config.KubeConfigPath, config.Context)
 
 	if err != nil {
 		log.Fatalf("Failed to create Kubernetes client: %v", err)
@@ -28,9 +28,9 @@ func main() {
 
 	certService := cert.NewDefaultService()
 
-	svc := service.NewDefaultManager(repo, certService)
+	manager := service.NewDefaultManager(repo, certService)
 
-	model, err := ui.NewModel(svc, config.Namespace, config.Name)
+	model, err := ui.NewModel(manager, config.Namespace, config.Name)
 
 	if err != nil {
 		log.Fatalf("Failed to create UI model: %v", err)
