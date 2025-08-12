@@ -23,8 +23,7 @@ type keyHint struct {
 
 var baseKeyHints = []keyHint{
 	{"u", "refresh"},
-	{"tab", "switch pane"},
-	{"p", "switch pane"},
+	{"tab/p", "switch pane"},
 	{"r", "toggle raw"},
 	{"c", "copy cert"},
 	{"C", "copy key"},

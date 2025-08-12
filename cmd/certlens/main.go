@@ -8,8 +8,7 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 
 	"github.com/codechamp1/certlens/configs"
-	"github.com/codechamp1/certlens/internal/client"
-	"github.com/codechamp1/certlens/internal/repository"
+	"github.com/codechamp1/certlens/internal/data"
 	"github.com/codechamp1/certlens/internal/service"
 	"github.com/codechamp1/certlens/internal/ui"
 )
@@ -17,17 +16,19 @@ import (
 func main() {
 	config := configs.Load()
 
-	kubeClient, err := client.NewSecretsFetcher(config.KubeConfigPath, config.Context)
+	kubeClient, err := data.NewDefaultSecretsFetcher(config.KubeConfigPath, config.Context)
 
 	if err != nil {
-		log.Fatalf("Failed to create Kubernetes client: %v", err)
+		log.Fatalf("Failed to create Kubernetes data: %v", err)
 	}
 
-	repo := repository.NewSecretsRepository(kubeClient)
+	parser := data.NewDefaultParser()
 
-	svc := service.NewSecretsService(repo)
+	repo := data.NewDefaultRepository(kubeClient, parser)
 
-	model, err := ui.NewModel(svc, config.Namespace, config.Name)
+	manager := service.NewDefaultManager(repo)
+
+	model, err := ui.NewModel(manager, config.Namespace, config.Name)
 
 	if err != nil {
 		log.Fatalf("Failed to create UI model: %v", err)
