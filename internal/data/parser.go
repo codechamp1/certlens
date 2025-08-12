@@ -1,4 +1,4 @@
-package cert
+package data
 
 import (
 	"crypto/x509"
@@ -8,22 +8,24 @@ import (
 	"net/url"
 	"strings"
 	"time"
+
+	"github.com/codechamp1/certlens/internal/domains/tls"
 )
 
-type Service interface {
-	ParseTLSCert(tlsCert []byte) ([]TLS, error)
+type defaultParser struct{}
+
+type CertParser interface {
+	ParseTLSCert(tlsCert []byte) ([]tls.Cert, error)
 }
 
-type defaultService struct{}
-
-func NewDefaultService() Service {
-	return defaultService{}
+func NewDefaultParser() CertParser {
+	return defaultParser{}
 }
 
-func (cs defaultService) ParseTLSCert(tlsCert []byte) ([]TLS, error) {
+func (cs defaultParser) ParseTLSCert(tlsCert []byte) ([]tls.Cert, error) {
 	x509Certs, err := parseCertsFromString(string(tlsCert))
 	if err != nil {
-		return []TLS{}, fmt.Errorf("service can not parse tls cert, err: %w", err)
+		return []tls.Cert{}, fmt.Errorf("service can not parse tls cert, err: %w", err)
 	}
 
 	return parseCertificateChain(x509Certs), nil
@@ -32,10 +34,10 @@ func (cs defaultService) ParseTLSCert(tlsCert []byte) ([]TLS, error) {
 var keyUsageNames = map[x509.KeyUsage]string{
 	x509.KeyUsageDigitalSignature:  "Digital Signature",
 	x509.KeyUsageContentCommitment: "Content Commitment",
-	x509.KeyUsageKeyEncipherment:   "Key Encipherment",
-	x509.KeyUsageDataEncipherment:  "TLS Encipherment",
-	x509.KeyUsageKeyAgreement:      "Key Agreement",
-	x509.KeyUsageCertSign:          "Cert Sign",
+	x509.KeyUsageKeyEncipherment:   "PemKey Encipherment",
+	x509.KeyUsageDataEncipherment:  "Secret Encipherment",
+	x509.KeyUsageKeyAgreement:      "PemKey Agreement",
+	x509.KeyUsageCertSign:          "Secret Sign",
 	x509.KeyUsageCRLSign:           "CRL Sign",
 	x509.KeyUsageEncipherOnly:      "Encipher Only",
 	x509.KeyUsageDecipherOnly:      "Decipher Only",
@@ -51,33 +53,10 @@ var extKeyUsageMap = map[x509.ExtKeyUsage]string{
 	x509.ExtKeyUsageOCSPSigning:     "OCSP Signing",
 }
 
-type Status int
-
-const (
-	valid Status = iota
-	warning
-	critical
-	expired
-)
-
-var expiryStatusStrings = map[Status]string{
-	valid:    "OK",
-	warning:  "Warning",
-	critical: "Critical",
-	expired:  "Expired",
-}
-
-func (s Status) String() string {
-	if str, ok := expiryStatusStrings[s]; ok {
-		return str
-	}
-	return "Unknown"
-}
-
-func fromX509(cert x509.Certificate) TLS {
+func fromX509(cert x509.Certificate) tls.Cert {
 	percent, status := expiryStatusByPercentage(cert, 25, 10)
-	return TLS{
-		TLSRawData: TLSRawData{
+	return tls.Cert{
+		CertRawData: tls.CertRawData{
 			Subject:               cert.Subject.String(),
 			Issuer:                cert.Issuer.String(),
 			SerialNumber:          cert.SerialNumber.String(),
@@ -99,14 +78,14 @@ func fromX509(cert x509.Certificate) TLS {
 			ExtKeyUsages:          extractExtendedKeyUsages(cert),
 			Version:               cert.Version,
 		},
-		TLSComputedData: TLSComputedData{
+		CertComputedData: tls.CertComputedData{
 			Expired:             time.Now().After(cert.NotAfter),
 			TimeUntilExpiry:     time.Until(cert.NotAfter),
 			TotalValidity:       cert.NotAfter.Sub(cert.NotBefore),
 			TimeSinceIssued:     time.Since(cert.NotBefore),
 			ValidityUsedPercent: float64(time.Since(cert.NotBefore)) / float64(cert.NotAfter.Sub(cert.NotBefore)) * 100,
 			RemainingPercent:    percent,
-			ExpiryStatus:        status.String(),
+			ExpiryStatus:        status,
 			IsSelfSigned:        cert.CheckSignatureFrom(&cert) == nil,
 			IsCurrentlyValid:    !time.Now().After(cert.NotAfter) && time.Now().After(cert.NotBefore),
 		},
@@ -145,8 +124,8 @@ func parseCertsFromString(pemStr string) ([]*x509.Certificate, error) {
 	return certs, nil
 }
 
-func parseCertificateChain(certs []*x509.Certificate) []TLS {
-	var certData []TLS
+func parseCertificateChain(certs []*x509.Certificate) []tls.Cert {
+	var certData []tls.Cert
 	for _, cert := range certs {
 		certData = append(certData, fromX509(*cert))
 	}
@@ -183,25 +162,25 @@ func keyUsageToString(ku x509.KeyUsage) string {
 	return strings.Join(usages, ", ")
 }
 
-func expiryStatusByPercentage(cert x509.Certificate, warningThreshold, criticalThreshold float64) (percentRemaining float64, status Status) {
+func expiryStatusByPercentage(cert x509.Certificate, warningThreshold, criticalThreshold float64) (percentRemaining float64, status tls.ExpiryStatus) {
 	now := time.Now()
 	validityDuration := cert.NotAfter.Sub(cert.NotBefore)
 	timeRemaining := cert.NotAfter.Sub(now)
 
 	if validityDuration <= 0 {
-		return 0, critical
+		return 0, tls.Critical
 	}
 
 	percentRemaining = float64(timeRemaining) / float64(validityDuration) * 100
 
 	if now.After(cert.NotAfter) {
-		status = expired
+		status = tls.Expired
 	} else if percentRemaining <= criticalThreshold {
-		status = critical
+		status = tls.Critical
 	} else if percentRemaining <= warningThreshold {
-		status = warning
+		status = tls.Warning
 	} else {
-		status = valid
+		status = tls.Valid
 	}
 
 	return percentRemaining, status

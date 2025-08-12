@@ -3,39 +3,25 @@ package service
 import (
 	"fmt"
 
-	"github.com/codechamp1/certlens/internal/domains/cert"
-	"github.com/codechamp1/certlens/internal/domains/secret"
+	"github.com/codechamp1/certlens/internal/domains/tls"
 )
 
 type Manager interface {
-	InspectTLSSecret(tlsSecret secret.TLS) ([]cert.TLS, error)
-	ListTLSSecrets(namespace string) ([]secret.TLS, error)
-	ListTLSSecret(namespace, name string) (secret.TLS, error)
+	ListTLSSecrets(namespace string) ([]tls.Secret, error)
+	LoadTLSSecret(namespace, name string) (tls.Secret, error)
 }
 
 type defaultManager struct {
-	secret.Repository
-	cert.Service
+	tls.Repository
 }
 
-func NewDefaultManager(sr secret.Repository, cs cert.Service) Manager {
+func NewDefaultManager(tr tls.Repository) Manager {
 	return defaultManager{
-		Repository: sr,
-		Service:    cs,
+		Repository: tr,
 	}
 }
 
-func (s defaultManager) InspectTLSSecret(tlsSecret secret.TLS) ([]cert.TLS, error) {
-	certData, err := s.ParseTLSCert(tlsSecret.Cert())
-
-	if err != nil {
-		return nil, fmt.Errorf("app service can not parse tls cert: %w", err)
-	}
-
-	return certData, nil
-}
-
-func (s defaultManager) ListTLSSecrets(namespace string) ([]secret.TLS, error) {
+func (s defaultManager) ListTLSSecrets(namespace string) ([]tls.Secret, error) {
 	tlsSecrets, err := s.GetTLSSecrets(namespace)
 
 	if err != nil {
@@ -45,10 +31,10 @@ func (s defaultManager) ListTLSSecrets(namespace string) ([]secret.TLS, error) {
 	return tlsSecrets, nil
 }
 
-func (s defaultManager) ListTLSSecret(namespace, name string) (secret.TLS, error) {
+func (s defaultManager) LoadTLSSecret(namespace, name string) (tls.Secret, error) {
 	tlsSecret, err := s.GetTLSSecret(namespace, name)
 	if err != nil {
-		return secret.TLS{}, fmt.Errorf("failed to get TLS secret %s in namespace %s: %w", name, namespace, err)
+		return tls.Secret{}, fmt.Errorf("failed to get TLS  secret %s in namespace %s: %w", name, namespace, err)
 	}
 
 	return tlsSecret, nil

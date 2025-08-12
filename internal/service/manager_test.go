@@ -5,17 +5,15 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/codechamp1/certlens/internal/domains/cert"
-	"github.com/codechamp1/certlens/internal/domains/secret"
+	"github.com/codechamp1/certlens/internal/domains/tls"
 	"github.com/codechamp1/certlens/internal/service"
 )
 
 var errRepo = errors.New("simulated error")
 
 func TestNewSecretsService(t *testing.T) {
-	mockRepo := secret.NewMockRepository(nil, nil)
-	mockService := cert.NewMockService(nil)
-	svc := service.NewDefaultManager(mockRepo, mockService)
+	mockRepo := service.NewMockRepository(nil, nil)
+	svc := service.NewDefaultManager(mockRepo)
 	if svc == nil {
 		t.Error("secrets service should not be nil")
 	}
@@ -30,50 +28,54 @@ func TestListTLSSecrets(t *testing.T) {
 	tests := []struct {
 		name              string
 		namespace         string
-		secrets           []secret.TLS
-		expectedSecretIDs []secret.TLS
+		secrets           []tls.Secret
+		expectedSecretIDs []tls.Secret
 		expectedRepoErr   error
 	}{
 		{
 			name:              "Should return error if can not fetch secrets",
 			namespace:         "",
-			secrets:           []secret.TLS{},
-			expectedSecretIDs: []secret.TLS{},
+			secrets:           []tls.Secret{},
+			expectedSecretIDs: []tls.Secret{},
 			expectedRepoErr:   errRepo,
 		},
 		{
-			name:      "Should transform all TLS secrets secret TLS",
+			name:      "Should transform all Secret secrets secret Secret",
 			namespace: "default",
-			secrets: []secret.TLS{
-				secret.NewTLS(
+			secrets: []tls.Secret{
+				tls.NewTLS(
 					"tls-secret-1",
 					"default",
 					"kubernetes/tls",
 					[]byte("cert-data"),
 					[]byte("key-data"),
+					[]tls.Cert{},
 				),
-				secret.NewTLS(
+				tls.NewTLS(
 					"tls-secret-2",
 					"default",
 					"kubernetes/tls",
 					[]byte("cert-data"),
 					[]byte("key-data"),
+					[]tls.Cert{},
 				),
 			},
-			expectedSecretIDs: []secret.TLS{
-				secret.NewTLS(
+			expectedSecretIDs: []tls.Secret{
+				tls.NewTLS(
 					"tls-secret-1",
 					"default",
 					"kubernetes/tls",
 					[]byte("cert-data"),
 					[]byte("key-data"),
+					[]tls.Cert{},
 				),
-				secret.NewTLS(
+				tls.NewTLS(
 					"tls-secret-2",
 					"default",
 					"kubernetes/tls",
 					[]byte("cert-data"),
 					[]byte("key-data"),
+					[]tls.Cert{},
 				),
 			},
 		},
@@ -81,11 +83,11 @@ func TestListTLSSecrets(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			mockRepo := secret.NewMockRepository(func(namespace string) ([]secret.TLS, error) {
+			mockRepo := service.NewMockRepository(func(namespace string) ([]tls.Secret, error) {
 				return tt.secrets, tt.expectedRepoErr
 			}, nil)
 
-			svc := service.NewDefaultManager(mockRepo, nil)
+			svc := service.NewDefaultManager(mockRepo)
 			secrets, err := svc.ListTLSSecrets(tt.namespace)
 
 			if !errors.Is(err, tt.expectedRepoErr) {
@@ -93,7 +95,7 @@ func TestListTLSSecrets(t *testing.T) {
 			}
 
 			if secrets == nil {
-				secrets = []secret.TLS{}
+				secrets = []tls.Secret{}
 			}
 
 			if !reflect.DeepEqual(secrets, tt.expectedSecretIDs) {
@@ -107,33 +109,35 @@ func TestListTLSSecret(t *testing.T) {
 	test := []struct {
 		name             string
 		namespace        string
-		secret           secret.TLS
-		expectedSecretID secret.TLS
+		secret           tls.Secret
+		expectedSecretID tls.Secret
 		expectedRepoErr  error
 	}{
 		{
 			name:             "Should return error if can not fetch secret",
 			namespace:        "default",
-			secret:           secret.TLS{},
-			expectedSecretID: secret.TLS{},
+			secret:           tls.Secret{},
+			expectedSecretID: tls.Secret{},
 			expectedRepoErr:  errRepo,
 		},
 		{
-			name:      "Should secret TLS for a single TLS secret",
+			name:      "Should secret Secret for a single Secret secret",
 			namespace: "default",
-			secret: secret.NewTLS(
+			secret: tls.NewTLS(
 				"tls-secret-1",
 				"default",
 				"kubernetes/tls",
 				[]byte("cert-data"),
 				[]byte("key-data"),
+				[]tls.Cert{},
 			),
-			expectedSecretID: secret.NewTLS(
+			expectedSecretID: tls.NewTLS(
 				"tls-secret-1",
 				"default",
 				"kubernetes/tls",
 				[]byte("cert-data"),
 				[]byte("key-data"),
+				[]tls.Cert{},
 			),
 			expectedRepoErr: nil,
 		},
@@ -141,12 +145,12 @@ func TestListTLSSecret(t *testing.T) {
 
 	for _, tt := range test {
 		t.Run(tt.name, func(t *testing.T) {
-			mockRepo := secret.NewMockRepository(nil, func(namespace, name string) (secret.TLS, error) {
+			mockRepo := service.NewMockRepository(nil, func(namespace, name string) (tls.Secret, error) {
 				return tt.secret, tt.expectedRepoErr
 			})
 
-			svc := service.NewDefaultManager(mockRepo, nil)
-			secretID, err := svc.ListTLSSecret(tt.namespace, tt.secret.Name())
+			svc := service.NewDefaultManager(mockRepo)
+			secretID, err := svc.LoadTLSSecret(tt.namespace, tt.secret.Name())
 
 			if !errors.Is(err, tt.expectedRepoErr) {
 				t.Errorf("expected error %v, got %v", tt.expectedRepoErr, err)

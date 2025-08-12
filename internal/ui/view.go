@@ -12,7 +12,7 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 
-	"github.com/codechamp1/certlens/internal/domains/secret"
+	"github.com/codechamp1/certlens/internal/domains/tls"
 	"github.com/codechamp1/certlens/internal/service"
 )
 
@@ -24,7 +24,7 @@ const (
 )
 
 type secretsLoadedMsg struct {
-	secrets []secret.TLS
+	secrets []tls.Secret
 }
 
 type renderSecretsListMsg struct{}
@@ -52,7 +52,7 @@ type secretsListDelegate struct {
 }
 
 type secretsListItem struct {
-	secret.TLS
+	tls.Secret
 }
 
 func (s secretsListItem) Title() string       { return s.Name() }
@@ -69,12 +69,12 @@ type Model struct {
 	theme       ThemeProvider
 	debounceTag int
 
-	// TLS Data
+	// Secret Data
 	certPaginator  paginator.Model
 	certViewPages  []string
 	selectedSecret *secretsListItem
 	secretsList    list.Model
-	tlsSecrets     []secret.TLS
+	tlsSecrets     []tls.Secret
 
 	// Ui elements
 	selectedPane      Pane
@@ -91,7 +91,7 @@ type Model struct {
 func NewModel(manager service.Manager, namespace, name string) (Model, error) {
 	var items []list.Item
 	secretsList := list.New(items, newSecretDelegate(), 50, 20)
-	secretsList.Title = "Select a TLS Secret"
+	secretsList.Title = "Select a Secret Secret"
 	secretsList.SetShowHelp(false)
 	defaultPane := LeftPane
 	return Model{
@@ -202,7 +202,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	if sel := m.secretsList.SelectedItem(); sel != nil {
 		if item, ok := sel.(secretsListItem); ok {
-			if m.selectedSecret == nil || !m.selectedSecret.Equals(item.TLS) {
+			if m.selectedSecret == nil || !m.selectedSecret.Equals(item.Secret) {
 				m.selectedSecret = &item
 				m.debounceTag++
 				cmds = append(cmds, tea.Tick(debounceDuration, func(t time.Time) tea.Msg { return inspectTLSSecretMsg{tag: m.debounceTag} }))
@@ -236,11 +236,11 @@ func loadSecretsCmd(m Model) tea.Cmd {
 			}
 
 			if m.name != "" {
-				tlsSecret, err := m.manager.ListTLSSecret(m.namespace, m.name)
+				tlsSecret, err := m.manager.LoadTLSSecret(m.namespace, m.name)
 				if err != nil {
 					return errorMsg{fmt.Errorf("failed to load secret %s/%s: %w", m.namespace, m.name, err)}
 				}
-				return secretsLoadedMsg{[]secret.TLS{tlsSecret}}
+				return secretsLoadedMsg{[]tls.Secret{tlsSecret}}
 			}
 
 			tlsSecrets, err := m.manager.ListTLSSecrets(m.namespace)
@@ -282,15 +282,11 @@ func (m Model) inspectedTLSSecretContent() ([]string, error) {
 		return []string{m.selectedSecret.PemCert(), m.selectedSecret.PemKey()}, nil
 	}
 
-	certs, err := m.manager.InspectTLSSecret(m.selectedSecret.TLS)
-	if err != nil {
-		return nil, fmt.Errorf("failed to inspect secret %s/%s: %w", m.selectedSecret.Namespace(), m.selectedSecret.Name(), err)
-	}
-
 	var views []string
-	for _, cert := range certs {
+	for _, cert := range m.selectedSecret.Certs() {
 		views = append(views, formatCertificateInfo(cert, m.theme))
 	}
+
 	return views, nil
 }
 
@@ -333,7 +329,7 @@ func (m *Model) handleCopyMsg(msg copyMsg) {
 	}
 }
 
-func tlsSecretsToListItems(ts []secret.TLS) []list.Item {
+func tlsSecretsToListItems(ts []tls.Secret) []list.Item {
 	items := make([]list.Item, len(ts))
 	for i, s := range ts {
 		items[i] = secretsListItem{s}
