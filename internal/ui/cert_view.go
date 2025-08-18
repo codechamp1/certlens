@@ -55,15 +55,26 @@ func viewFieldsFromStruct(s interface{}) []CertField {
 	return fields
 }
 
-func renderField(keyStyle lipgloss.Style, valueStyle lipgloss.Style, key, value string) string {
-	return lipgloss.JoinHorizontal(
-		lipgloss.Top,
-		keyStyle.Render(key+":"),
-		valueStyle.Render(value),
-	)
+//func renderField(keyStyle lipgloss.Style, valueStyle lipgloss.Style, key, value string) string {
+//	return lipgloss.JoinHorizontal(
+//		lipgloss.Top,
+//		keyStyle.Render(key+":"),
+//		valueStyle.Render(value),
+//	)
+//}
+
+func renderField(t ThemeProvider, key, value string, maxWidth int) string {
+	keyStr := t.Key().Render(key + ":")
+	keyWidth := lipgloss.Width(keyStr)
+	valueWidth := maxWidth - keyWidth
+	if valueWidth < 0 {
+		valueWidth = 0
+	}
+
+	return lipgloss.JoinHorizontal(lipgloss.Top, keyStr, t.Value(50).Render(value))
 }
 
-func formatCertificateInfo(ci service.CertificateInfo, t ThemeProvider) string {
+func formatCertificateInfo(ci service.CertificateInfo, t ThemeProvider, width int) string {
 	var sb strings.Builder
 	val := reflect.ValueOf(ci)
 	typ := reflect.TypeOf(ci)
@@ -80,7 +91,7 @@ func formatCertificateInfo(ci service.CertificateInfo, t ThemeProvider) string {
 		sb.WriteString("\n")
 		fields := viewFieldsFromStruct(fieldVal.Interface())
 		for _, f := range fields {
-			sb.WriteString(renderField(t.Key(), t.Value(), f.Label, f.Value))
+			sb.WriteString(renderField(t, f.Label, f.Value, width))
 			sb.WriteString("\n")
 		}
 		sb.WriteString("\n")

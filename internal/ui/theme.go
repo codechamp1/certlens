@@ -10,7 +10,7 @@ type ThemeProvider interface {
 	SectionHeader() lipgloss.Style
 	Pane(selected bool, width, height int) lipgloss.Style
 	Key() lipgloss.Style
-	Value() lipgloss.Style
+	Value(width int) lipgloss.Style
 	Help(width int) lipgloss.Style
 }
 
@@ -46,7 +46,6 @@ var Default = Theme{
 
 	value: lipgloss.NewStyle().
 		Foreground(lipgloss.Color("#00FF00")).
-		MaxWidth(50).
 		PaddingLeft(1), // Same dark gray as the main text for values
 
 }
@@ -81,8 +80,8 @@ func (t Theme) Key() lipgloss.Style {
 	return t.key
 }
 
-func (t Theme) Value() lipgloss.Style {
-	return t.value
+func (t Theme) Value(width int) lipgloss.Style {
+	return t.value.Width(width)
 }
 
 func (t Theme) Help(width int) lipgloss.Style {

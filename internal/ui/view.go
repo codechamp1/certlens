@@ -330,7 +330,7 @@ func (m Model) inspectedTLSSecretContent(namespace, name string, raw bool) ([]st
 
 	var views []string
 	for _, cert := range certs {
-		views = append(views, formatCertificateInfo(cert, m.theme))
+		views = append(views, formatCertificateInfo(cert, m.theme, m.inspectedViewport.Width))
 	}
 	return views, nil
 }
