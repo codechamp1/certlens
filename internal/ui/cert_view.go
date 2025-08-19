@@ -55,23 +55,15 @@ func viewFieldsFromStruct(s interface{}) []CertField {
 	return fields
 }
 
-//func renderField(keyStyle lipgloss.Style, valueStyle lipgloss.Style, key, value string) string {
-//	return lipgloss.JoinHorizontal(
-//		lipgloss.Top,
-//		keyStyle.Render(key+":"),
-//		valueStyle.Render(value),
-//	)
-//}
-
 func renderField(t ThemeProvider, key, value string, maxWidth int) string {
-	keyStr := t.Key().Render(key + ":")
+	keyStr := t.Key(int(float64(maxWidth) * 0.2)).Render(key + ":")
 	keyWidth := lipgloss.Width(keyStr)
-	valueWidth := maxWidth - keyWidth
+	valueWidth := int(float64(maxWidth-keyWidth) * 0.8)
 	if valueWidth < 0 {
 		valueWidth = 0
 	}
 
-	return lipgloss.JoinHorizontal(lipgloss.Top, keyStr, t.Value(50).Render(value))
+	return lipgloss.JoinHorizontal(lipgloss.Top, keyStr, " ", t.Value(valueWidth).Render(value))
 }
 
 func formatCertificateInfo(ci service.CertificateInfo, t ThemeProvider, width int) string {

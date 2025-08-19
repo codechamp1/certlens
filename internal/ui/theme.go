@@ -9,7 +9,7 @@ type ThemeProvider interface {
 	ErrorModalWithWidth(width int) lipgloss.Style
 	SectionHeader() lipgloss.Style
 	Pane(selected bool, width, height int) lipgloss.Style
-	Key() lipgloss.Style
+	Key(width int) lipgloss.Style
 	Value(width int) lipgloss.Style
 	Help(width int) lipgloss.Style
 }
@@ -41,13 +41,10 @@ var Default = Theme{
 	key: lipgloss.NewStyle().
 		Bold(true).
 		Foreground(lipgloss.Color("#FFA500")).
-		Width(20).
 		Align(lipgloss.Right),
 
 	value: lipgloss.NewStyle().
-		Foreground(lipgloss.Color("#00FF00")).
-		PaddingLeft(1), // Same dark gray as the main text for values
-
+		Foreground(lipgloss.Color("#00FF00")),
 }
 
 func (t Theme) DocStyle() lipgloss.Style {
@@ -76,8 +73,8 @@ func (t Theme) SectionHeader() lipgloss.Style {
 	return t.sectionHeader
 }
 
-func (t Theme) Key() lipgloss.Style {
-	return t.key
+func (t Theme) Key(width int) lipgloss.Style {
+	return t.key.Width(width)
 }
 
 func (t Theme) Value(width int) lipgloss.Style {
