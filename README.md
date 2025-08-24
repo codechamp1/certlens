@@ -54,5 +54,5 @@ certlens -kubeconfig ~/.kube/config -namespace my-namespace
 ## Integrations
 - **k9s plugin**: certlens can be used as a plugin inside [k9s](https://k9scli.io) to inspect TLS secrets directly from the k9s UI.  
   See [`compat/k9s/plugins.yml`](compat/k9s/plugins.yml) for configuration details.
-- **kubectl plugin**: certlens can be used as a [kubectl plugin](https://kubernetes.io/docs/tasks/extend-kubectl/kubectl-plugins/). Run make kubectl-plugin to install it, then use kubectl certlens to access certlens as a kubectl plugin.
+- **kubectl plugin**: certlens can be used as a [kubectl plugin](https://kubernetes.io/docs/tasks/extend-kubectl/kubectl-plugins/). Run `make kubectl-plugin` to install it, then use `kubectl certlens` to access certlens as a kubectl plugin.
 
