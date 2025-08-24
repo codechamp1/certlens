@@ -152,6 +152,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case tea.WindowSizeMsg:
 		m.updateLayout(msg.Width, msg.Height)
+		m.renderTLSSecretContent(false)
 	case copyMsg:
 		var copyData string
 		tlsCert, tlsKey, err := m.secretsService.RawInspectTLSSecret(m.selectedSecret.namespace, m.selectedSecret.name)
@@ -183,7 +184,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		cmds = append(cmds, m.spinner.Tick)
 	case inspectTLSSecretMsg:
 		if msg.tag == m.debounceTag {
-			m.handleInspectTLSSecretMsg()
+			m.renderTLSSecretContent(true)
 		}
 	case errorMsg:
 		m.loading = false
@@ -220,13 +221,30 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	return m, tea.Batch(cmds...)
 }
 
-func (m *Model) handleInspectTLSSecretMsg() {
+func (m *Model) renderTLSSecretContent(resetPaginator bool) {
+	if m.selectedSecret == nil {
+		return
+	}
+
 	data, err := m.inspectedTLSSecretContent(m.selectedSecret.namespace, m.selectedSecret.name, m.showRaw)
 	m.certViewPages = data
 	m.inspectedError = err
-	m.certPaginator.SetTotalPages(len(data))
-	m.certPaginator.Page = 0
-	m.inspectedViewport.SetContent(m.certViewPages[m.certPaginator.Page] + "\n\n" + m.certPaginator.View())
+
+	if resetPaginator {
+		m.certPaginator.SetTotalPages(len(data))
+		m.certPaginator.Page = 0
+	}
+
+	// Keep page in bounds
+	if m.certPaginator.Page >= len(data) {
+		m.certPaginator.Page = 0
+	}
+
+	if len(m.certViewPages) > 0 {
+		m.inspectedViewport.SetContent(
+			m.certViewPages[m.certPaginator.Page] + "\n\n" + m.certPaginator.View(),
+		)
+	}
 }
 
 func (m Model) View() string {
