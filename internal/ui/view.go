@@ -235,7 +235,6 @@ func (m *Model) renderTLSSecretContent(resetPaginator bool) {
 		m.certPaginator.Page = 0
 	}
 
-	// Keep page in bounds
 	if m.certPaginator.Page >= len(data) {
 		m.certPaginator.Page = 0
 	}
