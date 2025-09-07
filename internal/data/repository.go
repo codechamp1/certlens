@@ -13,6 +13,8 @@ type defaultRepository struct {
 	CertParser
 }
 
+var _ tls.Repository = defaultRepository{}
+
 func NewDefaultRepository(c SecretsFetcher, cp CertParser) tls.Repository {
 	return defaultRepository{
 		SecretsFetcher: c,
@@ -29,7 +31,7 @@ func (s defaultRepository) GetTLSSecrets(namespace string) ([]tls.Secret, error)
 	var tlsSecrets []tls.Secret
 	for _, secret := range secretsList.Items {
 		if secret.Type == corev1.SecretTypeTLS {
-			certs, err := s.ParseTLSCert(secret.Data[corev1.TLSCertKey])
+			certs, err := s.ParseTLSCerts(secret.Data[corev1.TLSCertKey])
 			if err != nil {
 				return nil, fmt.Errorf("failed to parse tls cert in the repository %s/%s: %w", secret.Namespace, secret.Name, err)
 			}
@@ -51,7 +53,7 @@ func (s defaultRepository) GetTLSSecret(namespace, name string) (tls.Secret, err
 		return tls.Secret{}, fmt.Errorf("secret %s in namespace %s is not of type Secret", name, namespace)
 	}
 
-	certs, err := s.ParseTLSCert(secret.Data[corev1.TLSCertKey])
+	certs, err := s.ParseTLSCerts(secret.Data[corev1.TLSCertKey])
 	if err != nil {
 		return tls.Secret{}, fmt.Errorf("failed to parse tls cert in the repository %s/%s: %w", secret.Namespace, secret.Name, err)
 	}

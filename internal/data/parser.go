@@ -15,15 +15,17 @@ import (
 type defaultParser struct{}
 
 type CertParser interface {
-	ParseTLSCert(tlsCert []byte) ([]tls.Cert, error)
+	ParseTLSCerts(tlsCert []byte) ([]tls.Cert, error)
 }
+
+var _ CertParser = defaultParser{}
 
 func NewDefaultParser() CertParser {
 	return defaultParser{}
 }
 
-func (cs defaultParser) ParseTLSCert(tlsCert []byte) ([]tls.Cert, error) {
-	x509Certs, err := parseCertsFromString(string(tlsCert))
+func (cs defaultParser) ParseTLSCerts(tlsCerts []byte) ([]tls.Cert, error) {
+	x509Certs, err := parseCertsFromBytes(tlsCerts)
 	if err != nil {
 		return []tls.Cert{}, fmt.Errorf("service can not parse tls cert, err: %w", err)
 	}
@@ -93,18 +95,17 @@ func fromX509(cert x509.Certificate) tls.Cert {
 
 }
 
-func parseCertsFromString(pemStr string) ([]*x509.Certificate, error) {
+func parseCertsFromBytes(pemBytes []byte) ([]*x509.Certificate, error) {
 	var certs []*x509.Certificate
-	data := []byte(pemStr)
 
 	for {
-		block, rest := pem.Decode(data)
+		block, rest := pem.Decode(pemBytes)
 		if block == nil {
 			break // no more blocks
 		}
 
 		if block.Type != "CERTIFICATE" {
-			data = rest
+			pemBytes = rest
 			continue // skip non-cert blocks
 		}
 
@@ -114,7 +115,7 @@ func parseCertsFromString(pemStr string) ([]*x509.Certificate, error) {
 		}
 
 		certs = append(certs, cert)
-		data = rest
+		pemBytes = rest
 	}
 
 	if len(certs) == 0 {

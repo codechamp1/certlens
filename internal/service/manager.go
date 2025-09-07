@@ -15,6 +15,8 @@ type defaultManager struct {
 	tls.Repository
 }
 
+var _ Manager = defaultManager{}
+
 func NewDefaultManager(tr tls.Repository) Manager {
 	return defaultManager{
 		Repository: tr,

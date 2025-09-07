@@ -3,15 +3,15 @@ package data
 import "github.com/codechamp1/certlens/internal/domains/tls"
 
 type mockParser struct {
-	mockParseTLSCert func(tlsCert []byte) ([]tls.Cert, error)
+	mockParseTLSCerts func(tlsCert []byte) ([]tls.Cert, error)
 }
 
-func NewMockParser(mockParseTLSCert func(tlsCert []byte) ([]tls.Cert, error)) CertParser {
+func NewMockParser(mockParseTLSCerts func(tlsCert []byte) ([]tls.Cert, error)) CertParser {
 	return mockParser{
-		mockParseTLSCert,
+		mockParseTLSCerts,
 	}
 }
 
-func (ms mockParser) ParseTLSCert(tlsCert []byte) ([]tls.Cert, error) {
-	return ms.mockParseTLSCert(tlsCert)
+func (ms mockParser) ParseTLSCerts(tlsCert []byte) ([]tls.Cert, error) {
+	return ms.mockParseTLSCerts(tlsCert)
 }

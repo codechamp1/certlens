@@ -16,15 +16,15 @@ import (
 func main() {
 	config := configs.Load()
 
-	kubeClient, err := data.NewDefaultSecretsFetcher(config.KubeConfigPath, config.Context)
+	secretsFetcher, err := data.NewDefaultSecretsFetcher(config.KubeConfigPath, config.Context)
 
 	if err != nil {
-		log.Fatalf("Failed to create Kubernetes data: %v", err)
+		log.Fatalf("Failed to create Kubernetes secrets fetcher: %v", err)
 	}
 
 	parser := data.NewDefaultParser()
 
-	repo := data.NewDefaultRepository(kubeClient, parser)
+	repo := data.NewDefaultRepository(secretsFetcher, parser)
 
 	manager := service.NewDefaultManager(repo)
 

@@ -20,6 +20,8 @@ type SecretsFetcher interface {
 	FetchSecret(namespace, name string) (*corev1.Secret, error)
 }
 
+var _ SecretsFetcher = Client{}
+
 func newClient(kubeconfig, context string) (*Client, error) {
 	config, err := buildConfigWithContext(context, kubeconfig)
 
