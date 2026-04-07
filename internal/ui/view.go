@@ -219,7 +219,7 @@ func (m *Model) renderTLSSecretContent(resetPaginator bool) {
 		return
 	}
 
-	data, err := m.inspectedTLSSecretContent(m.selectedSecret.namespace, m.selectedSecret.name, m.showRaw)
+	data, err := m.inspectedTLSSecretContent()
 	m.certViewPages = data
 	m.inspectedError = err
 
