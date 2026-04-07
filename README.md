@@ -17,7 +17,7 @@ https://github.com/user-attachments/assets/6ffaf013-ab4a-409d-8a27-47902a7f03a9
 ## Installation
 ### Using `go install`
 ```bash
-go install github.com/abapcp/certlens@latest
+go install github.com/codechamp1/certlens@latest
 ```
 ### Build from source
 ```bash
