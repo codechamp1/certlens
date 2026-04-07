@@ -14,7 +14,7 @@ plugins:
       - $CONTEXT
       - --kubeconfig
       - $KUBECONFIG
-    scope:
+    scopes:
       - secrets
   certlens-namespace:
     description: "Lens TLS Secrets"
@@ -29,5 +29,5 @@ plugins:
       - $CONTEXT
       - --kubeconfig
       - $KUBECONFIG
-    scope:
+    scopes:
       - secrets
