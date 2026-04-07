@@ -1,4 +1,4 @@
-# Variabile
+# Variables
 BINARY_NAME=certlens
 PKG=./...
 GO=go
@@ -14,32 +14,32 @@ kubectl-plugin:
 	@chmod +x "$$HOME/.local/bin/kubectl-certlens"
 	@echo "Installation complete!"
 
-# Build executabilul
+# Build executable
 build:
 	$(GO) build -o $(BINARY_NAME) ./cmd/$(BINARY_NAME)/
 
-# Rulează testele cu raport de acoperire
+# run tests
 test:
 	$(GO) test -v -race -coverprofile=coverage.out $(PKG)
 
-# Raport de acoperire (deschide în browser)
+# test coverage
 cover: test
 	$(GO) tool cover -html=coverage.out
 
 
-# Rulează linterul golangci-lint (trebuie instalat golangci-lint)
+# run linter
 lint:
 	golangci-lint run
 
-# Curățenie - șterge binarele și fișierele generate
+#  clean coverage
 clean:
 	rm -f $(BINARY_NAME) coverage.out
 
-# Rulează aplicația local (depinde de build)
+# run locally
 run: build
 	./$(BINARY_NAME)
 
-# Instalează binarul în $GOPATH/bin (sau $GOBIN)
+# Install in $GOPATH/bin (or $GOBIN)
 install:
 	$(GO) install ./cmd/$(BINARY_NAME)/
 
