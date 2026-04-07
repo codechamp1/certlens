@@ -324,18 +324,6 @@ func (m *Model) updateLayout(width, height int) {
 	m.helpView.SetWidth(m.uiLayout.TotalWidth)
 }
 
-func (m *Model) handleInspectTLSSecretMsg() {
-	if m.selectedSecret == nil {
-		return
-	}
-	data, err := m.inspectedTLSSecretContent()
-	m.certViewPages = data
-	m.inspectedError = err
-	m.certPaginator.SetTotalPages(len(data))
-	m.certPaginator.Page = 0
-	m.inspectedViewport.SetContent(m.certViewPages[m.certPaginator.Page] + "\n\n" + m.certPaginator.View())
-}
-
 func (m *Model) handleCopyMsg(msg copyMsg) {
 	if m.selectedSecret == nil {
 		return
