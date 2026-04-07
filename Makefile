@@ -28,7 +28,7 @@ cover: test
 
 
 # Rulează linterul golangci-lint (trebuie instalat golangci-lint)
-lint: install-lint
+lint:
 	golangci-lint run
 
 # Curățenie - șterge binarele și fișierele generate

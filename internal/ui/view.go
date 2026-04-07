@@ -154,6 +154,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case tea.WindowSizeMsg:
 		m.updateLayout(msg.Width, msg.Height)
+		m.renderTLSSecretContent(false)
 	case copyMsg:
 		m.handleCopyMsg(msg)
 	case renderSecretsListMsg:
@@ -176,7 +177,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		cmds = append(cmds, m.spinner.Tick)
 	case inspectTLSSecretMsg:
 		if msg.tag == m.debounceTag {
-			m.handleInspectTLSSecretMsg()
+			m.renderTLSSecretContent(true)
 		}
 	case errorMsg:
 		m.loading = false
@@ -211,6 +212,31 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	}
 
 	return m, tea.Batch(cmds...)
+}
+
+func (m *Model) renderTLSSecretContent(resetPaginator bool) {
+	if m.selectedSecret == nil {
+		return
+	}
+
+	data, err := m.inspectedTLSSecretContent()
+	m.certViewPages = data
+	m.inspectedError = err
+
+	if resetPaginator {
+		m.certPaginator.SetTotalPages(len(data))
+		m.certPaginator.Page = 0
+	}
+
+	if m.certPaginator.Page >= len(data) {
+		m.certPaginator.Page = 0
+	}
+
+	if len(m.certViewPages) > 0 {
+		m.inspectedViewport.SetContent(
+			m.certViewPages[m.certPaginator.Page] + "\n\n" + m.certPaginator.View(),
+		)
+	}
 }
 
 func (m Model) View() string {
@@ -284,7 +310,7 @@ func (m Model) inspectedTLSSecretContent() ([]string, error) {
 
 	var views []string
 	for _, cert := range m.selectedSecret.Certs() {
-		views = append(views, formatCertificateInfo(cert, m.theme))
+		views = append(views, formatCertificateInfo(cert, m.theme, m.inspectedViewport.Width))
 	}
 
 	return views, nil
@@ -296,18 +322,6 @@ func (m *Model) updateLayout(width, height int) {
 	m.inspectedViewport.Width = m.uiLayout.RightPaneWidth
 	m.inspectedViewport.Height = m.uiLayout.UsableHeight
 	m.helpView.SetWidth(m.uiLayout.TotalWidth)
-}
-
-func (m *Model) handleInspectTLSSecretMsg() {
-	if m.selectedSecret == nil {
-		return
-	}
-	data, err := m.inspectedTLSSecretContent()
-	m.certViewPages = data
-	m.inspectedError = err
-	m.certPaginator.SetTotalPages(len(data))
-	m.certPaginator.Page = 0
-	m.inspectedViewport.SetContent(m.certViewPages[m.certPaginator.Page] + "\n\n" + m.certPaginator.View())
 }
 
 func (m *Model) handleCopyMsg(msg copyMsg) {
