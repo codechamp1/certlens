@@ -1,4 +1,4 @@
-package repository_test
+package data_test
 
 import (
 	"errors"
@@ -8,23 +8,23 @@ import (
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	"github.com/codechamp1/certlens/internal/client"
-	"github.com/codechamp1/certlens/internal/domains"
-	"github.com/codechamp1/certlens/internal/repository"
+	"github.com/codechamp1/certlens/internal/data"
+	"github.com/codechamp1/certlens/internal/domains/tls"
 )
 
 var errTest = errors.New("simulated error")
 
 func TestNewSecretsRepository(t *testing.T) {
-	t.Run("Should create a repository with the given client", func(t *testing.T) {
-		mockClient := client.NewMockSecretsFetcher(nil, nil)
-		repo := repository.NewSecretsRepository(mockClient)
+	t.Run("Should create a domainservice with the given data", func(t *testing.T) {
+		mockClient := data.NewMockSecretsFetcher(nil, nil)
+		mockParser := data.NewMockParser(func(tlsCert []byte) ([]tls.Cert, error) { return []tls.Cert{}, nil })
+		repo := data.NewDefaultRepository(mockClient, mockParser)
 		if repo == nil {
-			t.Error("Expected repository to be created, but got nil")
+			t.Error("Expected domainservice to be created, but got nil")
 		}
 		//nolint
-		if _, ok := repo.(repository.SecretsRepository); !ok {
-			t.Error("Expected repository to implement SecretsRepository interface, but it does not")
+		if _, ok := repo.(tls.Repository); !ok {
+			t.Error("Expected domainservice to implement Repository interface, but it does not")
 		}
 	})
 }
@@ -34,14 +34,14 @@ func TestGetTLSSecrets(t *testing.T) {
 		name            string
 		namespace       string
 		secrets         v1.SecretList
-		expectedSecrets []domains.SecretInfo
+		expectedSecrets []tls.Secret
 		expectedErr     error
 	}{
 		{
-			name:            "Should return error if can not fetch the secret from the client",
+			name:            "Should return error if can not fetch the secret from the data",
 			namespace:       "",
 			secrets:         v1.SecretList{},
-			expectedSecrets: []domains.SecretInfo{},
+			expectedSecrets: []tls.Secret{},
 			expectedErr:     errTest,
 		},
 		{
@@ -68,19 +68,20 @@ func TestGetTLSSecrets(t *testing.T) {
 					},
 				},
 			},
-			expectedSecrets: []domains.SecretInfo{
-				{
-					Name:      "tls-secret-1",
-					Namespace: "default",
-					Type:      "kubernetes.io/tls",
-					TLSCert:   []byte("cert-data"),
-					TLSKey:    []byte("key-data"),
-				},
+			expectedSecrets: []tls.Secret{
+				tls.NewTLS(
+					"tls-secret-1",
+					"default",
+					"kubernetes.io/tls",
+					[]byte("cert-data"),
+					[]byte("key-data"),
+					[]tls.Cert{},
+				),
 			},
 			expectedErr: nil,
 		},
 		{
-			name:      "Should return no secrets if there are no TLS secrets",
+			name:      "Should return no secrets if there are no Secret secrets",
 			namespace: "default",
 			secrets: v1.SecretList{
 				Items: []v1.Secret{
@@ -92,21 +93,22 @@ func TestGetTLSSecrets(t *testing.T) {
 					},
 				},
 			},
-			expectedSecrets: []domains.SecretInfo{},
+			expectedSecrets: []tls.Secret{},
 			expectedErr:     nil,
 		},
 	}
 
 	for _, tt := range test {
 		t.Run(tt.name, func(t *testing.T) {
-			mockClient := client.NewMockSecretsFetcher(
+			mockClient := data.NewMockSecretsFetcher(
 				func(namespace string) (*v1.SecretList, error) {
 					return &tt.secrets, tt.expectedErr
 				},
 				nil,
 			)
+			mockParser := data.NewMockParser(func(tlsCert []byte) ([]tls.Cert, error) { return []tls.Cert{}, nil })
 
-			repo := repository.NewSecretsRepository(mockClient)
+			repo := data.NewDefaultRepository(mockClient, mockParser)
 
 			secrets, err := repo.GetTLSSecrets(tt.namespace)
 			if !errors.Is(err, tt.expectedErr) {
@@ -115,7 +117,7 @@ func TestGetTLSSecrets(t *testing.T) {
 
 			// normalize secrets for comparison
 			if secrets == nil {
-				secrets = []domains.SecretInfo{}
+				secrets = []tls.Secret{}
 			}
 
 			if !reflect.DeepEqual(secrets, tt.expectedSecrets) {
@@ -130,14 +132,14 @@ func TestGetTLSSecret(t *testing.T) {
 		name        string
 		namespace   string
 		secret      v1.Secret
-		expected    domains.SecretInfo
+		expected    tls.Secret
 		expectedErr error
 	}{
 		{
-			name:        "Should return error if can not fetch the secret from the client",
+			name:        "Should return error if can not fetch the secret from the data",
 			namespace:   "default",
 			secret:      v1.Secret{},
-			expected:    domains.SecretInfo{},
+			expected:    tls.Secret{},
 			expectedErr: errTest,
 		},
 		{
@@ -154,16 +156,17 @@ func TestGetTLSSecret(t *testing.T) {
 					v1.TLSPrivateKeyKey: []byte("key-data"),
 				},
 			},
-			expected: domains.SecretInfo{
-				Name:      "tls-secret-1",
-				Namespace: "default",
-				Type:      "kubernetes.io/tls",
-				TLSCert:   []byte("cert-data"),
-				TLSKey:    []byte("key-data"),
-			},
+			expected: tls.NewTLS(
+				"tls-secret-1",
+				"default",
+				"kubernetes.io/tls",
+				[]byte("cert-data"),
+				[]byte("key-data"),
+				[]tls.Cert{},
+			),
 		},
 		{
-			name:      "Should return error if the secret is not of type TLS",
+			name:      "Should return error if the secret is not of type Secret",
 			namespace: "default",
 			secret: v1.Secret{
 				ObjectMeta: metav1.ObjectMeta{
@@ -171,30 +174,31 @@ func TestGetTLSSecret(t *testing.T) {
 					Namespace: "default",
 				},
 			},
-			expected:    domains.SecretInfo{},
+			expected:    tls.Secret{},
 			expectedErr: errTest,
 		},
 	}
 
 	for _, tt := range test {
 		t.Run(tt.name, func(t *testing.T) {
-			mockClient := client.NewMockSecretsFetcher(
+			mockClient := data.NewMockSecretsFetcher(
 				nil,
 				func(namespace, name string) (*v1.Secret, error) {
 					return &tt.secret, tt.expectedErr
 				},
 			)
+			mockParser := data.NewMockParser(func(tlsCert []byte) ([]tls.Cert, error) { return []tls.Cert{}, nil })
 
-			repo := repository.NewSecretsRepository(mockClient)
+			repo := data.NewDefaultRepository(mockClient, mockParser)
 
-			secret, err := repo.GetTLSSecret(tt.namespace, tt.secret.Name)
+			tlsSecret, err := repo.GetTLSSecret(tt.namespace, tt.secret.Name)
 
 			if !errors.Is(err, tt.expectedErr) {
 				t.Errorf("Expected error %v, got %v", tt.expectedErr, err)
 			}
 
-			if !reflect.DeepEqual(secret, tt.expected) {
-				t.Errorf("Expected secret %+v, got %+v", tt.expected, secret)
+			if !reflect.DeepEqual(tlsSecret, tt.expected) {
+				t.Errorf("Expected secret %+v, got %+v", tt.expected, tlsSecret)
 			}
 		})
 	}

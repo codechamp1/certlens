@@ -8,7 +8,7 @@ import (
 
 	"github.com/charmbracelet/lipgloss"
 
-	"github.com/codechamp1/certlens/internal/service"
+	"github.com/codechamp1/certlens/internal/domains/tls"
 )
 
 type CertField struct {
@@ -66,10 +66,10 @@ func renderField(t ThemeProvider, key, value string, maxWidth int) string {
 	return lipgloss.JoinHorizontal(lipgloss.Top, keyStr, " ", t.Value(valueWidth).Render(value))
 }
 
-func formatCertificateInfo(ci service.CertificateInfo, t ThemeProvider, width int) string {
+func formatCertificateInfo(c tls.Cert, t ThemeProvider, width int) string {
 	var sb strings.Builder
-	val := reflect.ValueOf(ci)
-	typ := reflect.TypeOf(ci)
+	val := reflect.ValueOf(c)
+	typ := reflect.TypeOf(c)
 
 	for i := 0; i < typ.NumField(); i++ {
 		fieldVal := val.Field(i)

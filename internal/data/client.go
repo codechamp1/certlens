@@ -1,4 +1,4 @@
-package client
+package data
 
 import (
 	"context"
@@ -20,6 +20,8 @@ type SecretsFetcher interface {
 	FetchSecret(namespace, name string) (*corev1.Secret, error)
 }
 
+var _ SecretsFetcher = Client{}
+
 func newClient(kubeconfig, context string) (*Client, error) {
 	config, err := buildConfigWithContext(context, kubeconfig)
 
@@ -38,7 +40,7 @@ func newClient(kubeconfig, context string) (*Client, error) {
 	}, nil
 }
 
-func NewSecretsFetcher(kubeconfig, context string) (SecretsFetcher, error) {
+func NewDefaultSecretsFetcher(kubeconfig, context string) (SecretsFetcher, error) {
 	client, err := newClient(kubeconfig, context)
 
 	if err != nil {
